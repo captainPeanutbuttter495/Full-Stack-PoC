@@ -1,1 +1,157 @@
 @import "tailwindcss";
+
+  /*
+  design tokens + landing page shell
+  Scoped to .pwyw-* to avoid clashing with Tailwind utilities.
+  */
+
+:root {
+  --bg: oklch(0.985 0.005 95);
+  --bg-2: oklch(0.965 0.006 95);
+  --surface: #ffffff;
+  --ink: oklch(0.2 0.012 80);
+  --ink-2: oklch(0.32 0.012 80);
+  --muted: oklch(0.52 0.012 80);
+  --line: oklch(0.9 0.006 95);
+  --line-2: oklch(0.85 0.008 95);
+  --accent: oklch(0.45 0.13 155);
+  --accent-ink: oklch(0.97 0.02 155);
+
+  --r-card: 14px;
+  --r-ctrl: 9px;
+
+  --sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", "Menlo",
+    "Consolas", monospace;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg);
+}
+
+body {
+  font-family: var(--sans);
+}
+
+/* ----- Reset within prototype scope (zero-specificity via :where) ----- */
+.pwyw-page :where(*) {
+  box-sizing: border-box;
+}
+.pwyw-page :where(h1, h2, h3, p, ol, ul) {
+  margin: 0;
+  padding: 0;
+}
+.pwyw-page :where(ol, ul) {
+  list-style: none;
+}
+
+/* ----- Page shell ----- */
+.pwyw-page {
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--bg);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 40px 24px;
+  gap: 32px;
+  letter-spacing: -0.005em;
+}
+
+/*
+  Inner column 
+*/
+.pwyw-page > .pwyw-header,
+.pwyw-page > .pwyw-hero,
+.pwyw-page > .pwyw-footer {
+  width: 100%;
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ----- Header ----- */
+.pwyw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.pwyw-header > * {
+  min-width: 0;
+}
+.pwyw-nav-link {
+  font-size: 14px;
+  color: var(--ink-2);
+  padding: 6px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.pwyw-nav-link:hover {
+  background: var(--bg-2);
+  color: var(--ink);
+}
+.pwyw-nav-link[data-active="true"] {
+  color: var(--ink);
+  background: var(--bg-2);
+}
+
+/* ----- Typography helpers ---- */
+.pwyw-mono {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1, "ss01" 1;
+}
+.pwyw-text-xs {
+  font-size: 11px;
+}
+.pwyw-text-sm {
+  font-size: 13px;
+}
+.pwyw-text-base {
+  font-size: 15px;
+}
+.pwyw-muted {
+  color: var(--muted);
+}
+.pwyw-font-medium {
+  font-weight: 500;
+}
+.pwyw-tracking-tight {
+  letter-spacing: -0.02em;
+}
+
+/* ----- Layout helpers ----- */
+.pwyw-row {
+  display: flex;
+}
+.pwyw-items-center {
+  align-items: center;
+}
+.pwyw-gap-1 {
+  gap: 4px;
+}
+.pwyw-gap-2 {
+  gap: 8px;
+}
+
+/* ----- Footer ----- */
+.pwyw-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+}

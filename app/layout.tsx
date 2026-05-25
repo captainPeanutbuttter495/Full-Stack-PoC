@@ -1,9 +1,23 @@
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+const geistSans = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
+  weight: ["400", "500", "600"],
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  weight: ["400", "500"],
+});
+
 export const metadata: Metadata = {
-  title: "Full Stack PoC",
-  description: "Full-stack proof of concept",
+  title: "Pay-What-You-Want · Document Download Site",
+  description:
+    "Choose a document, enter any amount greater than $0, and unlock the download.",
 };
 
 export default function RootLayout({
@@ -12,7 +26,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable}`}
+    >
       <body>{children}</body>
     </html>
   );
