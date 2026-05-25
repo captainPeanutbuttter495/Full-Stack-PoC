@@ -1,18 +1,8 @@
 export default function Wordmark() {
   return (
-    <div className="pwyw-row pwyw-gap-2 pwyw-items-center">
-      <span
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: 999,
-          background: "var(--accent)",
-          display: "inline-block",
-        }}
-      />
-      <span className="pwyw-font-medium pwyw-tracking-tight pwyw-text-base">
-        Openleaf
-      </span>
+    <div className="flex items-center gap-2">
+      <span className="inline-block h-2 w-2 rounded-full bg-[oklch(0.45_0.13_155)]" />
+      <span className="text-[15px] font-medium tracking-tight">Openleaf</span>
     </div>
   );
 }
