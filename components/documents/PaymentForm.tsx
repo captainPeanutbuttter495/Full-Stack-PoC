@@ -2,6 +2,7 @@
 import { Document } from "@/lib/types";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -16,6 +17,7 @@ import {
   InputGroupInput,
 } from "../ui/input-group";
 import React from "react";
+import { Loader2 } from "lucide-react";
 
 type PaymentFormProps = Pick<
   Document,
@@ -29,6 +31,7 @@ function PaymentForm({
   category,
 }: PaymentFormProps) {
   const [paymentAmount, setPaymentAmount] = React.useState(0);
+  const [loading, setLoading] = React.useState(false);
 
   return (
     <Dialog>
@@ -43,7 +46,9 @@ function PaymentForm({
             <p>{category?.toUpperCase()}</p>
           </div>
           <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
-          <DialogDescription className="text-muted-foreground">{description}</DialogDescription>
+          <DialogDescription className="text-muted-foreground">
+            {description}
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
           <p className="font-bold">Enter your payment amount:</p>
@@ -65,9 +70,23 @@ function PaymentForm({
           </InputGroupAddon>
         </InputGroup>
         <DialogFooter>
-          <Button variant="outline">Cancel</Button>
-          <Button variant="default" disabled={paymentAmount <= 0}>
-            Submit Payment
+          <DialogClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button
+            variant="default"
+            disabled={paymentAmount <= 0 || loading}
+            onClick={() => {
+              setLoading(true);
+            }}
+          >
+            {loading ? (
+              <>
+                Processing... <Loader2 className="animate-spin" />
+              </>
+            ) : (
+              "Submit Payment"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
