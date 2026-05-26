@@ -15,7 +15,7 @@ function DocumentItem({
   category
 }: DocumentItemProps) {
   return (
-    <Card className="w-sm h-min">
+    <Card className="w-full">
       <CardHeader className="font-mono text-muted-foreground">
         <div className="flex justify-between items-center">
           <p>{category?.toUpperCase()}</p>
@@ -27,7 +27,7 @@ function DocumentItem({
       <CardContent className="flex flex-col gap-4">
         <h3 className="text-lg font-semibold">{title}</h3>
         <p>{description}</p>
-        <Button variant="outline" size="lg" className="w-full">
+        <Button variant="outline" size="lg" className="w-full bg-card">
           Select{" "}
         </Button>
       </CardContent>
