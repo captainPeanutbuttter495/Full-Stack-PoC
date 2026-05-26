@@ -2,6 +2,7 @@
 import { Document } from "@/lib/types";
 import { Card, CardContent, CardFooter, CardHeader } from "../ui/card";
 import { Button } from "../ui/button";
+import PaymentForm from "./PaymentForm";
 
 type DocumentItemProps = Pick<
   Document,
@@ -27,9 +28,7 @@ function DocumentItem({
       <CardContent className="flex flex-col gap-4">
         <h3 className="text-lg font-semibold">{title}</h3>
         <p>{description}</p>
-        <Button variant="outline" size="lg" className="w-full bg-card">
-          Select{" "}
-        </Button>
+        <PaymentForm title={title} description={description} suggested_price={suggested_price} category={category} />
       </CardContent>
     </Card>
   );
