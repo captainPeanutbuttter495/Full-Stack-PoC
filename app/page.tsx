@@ -1,6 +1,8 @@
 import Link from "next/link";
 import SiteHeader from "@/components/site-header";
 import SiteFooter from "@/components/site-footer";
+import { Button } from "@/components/ui/button";
+import { ArrowRight} from 'lucide-react'
 
 const STEPS = [
   ["01", "Browse", "Skim the library and open anything that looks useful."],
@@ -24,22 +26,12 @@ function Hero() {
         download. No accounts, no upsells.
       </p>
       <div className="mt-7 flex flex-wrap items-center gap-3 max-sm:mt-5">
-        <Link
-          href="/documents"
-          className="group inline-flex items-center justify-center gap-2 h-11 min-h-11 px-[18px] rounded-[9px] text-[14.5px] font-medium tracking-[-0.005em] no-underline whitespace-nowrap bg-[oklch(0.45_0.13_155)] text-[oklch(0.97_0.02_155)] hover:bg-[oklch(0.4_0.13_155)] active:translate-y-px transition-all duration-[120ms] ease-out"
-          style={{
-            boxShadow:
-              "inset 0 1px 0 oklch(0.35 0.13 155), 0 1px 1px oklch(0.4 0.13 155 / 0.2)",
-          }}
-        >
-          Browse Documents
-          <span
-            className="font-mono text-sm opacity-90 transition-transform duration-[160ms] ease-out group-hover:translate-x-0.5"
-            aria-hidden="true"
-          >
-            →
-          </span>
-        </Link>
+        <Button size='lg' asChild>
+          <Link href="/documents">
+            Browse Documents
+            <ArrowRight className="ml-2" size={16} />
+          </Link>
+        </Button>
         <span className="font-mono text-[11px] text-[oklch(0.52_0.012_80)]">
           6 seeded documents · proof of concept
         </span>
