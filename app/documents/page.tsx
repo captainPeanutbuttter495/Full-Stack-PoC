@@ -1,27 +1,38 @@
 "use client";
-
-import SiteHeader from "@/components/site-header";
-import SiteFooter from "@/components/site-footer";
 import { getAllDocuments } from "@/lib/documents";
+import { Card } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Document } from "@/lib/types";
+import { PostgrestError } from "@supabase/supabase-js";
+import DocumentItem from "@/components/documents/DocumentItem";
 
 export default function DocumentsPage() {
-  const handleTestClick = async () => {
-    const result = await getAllDocuments();
-    console.log(result);
-  };
+  const [documents, setDocuments] = useState<Document[]>([]);
+
+  useEffect(() => {
+    async function fetchDocuments() {
+      const result = await getAllDocuments();
+
+      if (result instanceof Error || result instanceof PostgrestError) {
+        console.error("Error fetching documents:", result);
+      } else {
+        setDocuments(result);
+      }
+    }
+    fetchDocuments();
+  });
 
   return (
-    <main className="flex min-h-screen flex-col gap-8 bg-[oklch(0.985_0.005_95)] px-10 pt-8 pb-6 font-sans text-[oklch(0.2_0.012_80)] tracking-[-0.005em] overflow-x-hidden max-sm:px-[18px] max-sm:pt-5 max-sm:pb-4 max-sm:gap-6">
-      <SiteHeader activePage="documents" />
-
-      <section className="flex flex-1 flex-col items-center justify-center w-full max-w-[1120px] mx-auto">
-        <p className="font-mono text-[13px] text-[oklch(0.52_0.012_80)]">
-          Documents will appear here.
-        </p>
-        <button onClick={handleTestClick}>test</button>
-      </section>
-
-      <SiteFooter />
-    </main>
+    <section className="h-min flex flex-wrap gap-4 flex-1 w-full">
+      {documents.map((doc) => (
+        <DocumentItem
+          key={doc.id}
+          category={doc.category}
+          title={doc.title}
+          description={doc.description}
+          suggested_price={doc.suggested_price}
+        />
+      ))}
+    </section>
   );
 }
