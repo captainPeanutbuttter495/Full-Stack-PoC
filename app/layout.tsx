@@ -33,7 +33,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <body>
-        <main className="flex min-h-screen flex-col gap-8 bg-background px-10 pt-8 pb-6 font-sans text-foreground tracking-[-0.005em] overflow-x-hidden max-sm:px-[18px] max-sm:pt-5 max-sm:pb-4 max-sm:gap-6">
+        <main className="h-svh w-svw">
           <SiteHeader />
           {children}
           <SiteFooter />
