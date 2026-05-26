@@ -1,30 +1,26 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Wordmark from "@/components/wordmark";
 import { Button } from "./ui/button";
 
+export default function SiteHeader() {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  const isDocs = pathname.startsWith("/documents");
 
-export default function SiteHeader({
-  activePage,
-}: {
-  activePage: "home" | "documents";
-}) {
   return (
-    <header className="flex items-center justify-between gap-3 pb-4 border-b border-[oklch(0.9_0.006_95)] min-w-0 w-full max-w-[1120px] mx-auto max-sm:pb-3">
+    <header className="flex items-center justify-between gap-3 pb-4 border-b border-border min-w-0 w-full max-w-[1120px] mx-auto max-sm:pb-3">
       <Wordmark />
       <nav className="flex gap-1" aria-label="Primary">
-        <Button variant={ activePage == 'home' ? 'default' : 'ghost' } asChild>
-          <Link
-            href="/"
-            aria-current={activePage === "home" ? "page" : undefined}
-          >
+        <Button variant={isHome ? "default" : "ghost"} asChild>
+          <Link href="/" aria-current={isHome ? "page" : undefined}>
             Home
           </Link>
         </Button>
-        <Button variant={ activePage == 'documents' ? 'default' : 'ghost' } asChild>
-          <Link
-            href="/documents"
-            aria-current={activePage === "documents" ? "page" : undefined}
-          >
+        <Button variant={isDocs ? "default" : "ghost"} asChild>
+          <Link href="/documents" aria-current={isDocs ? "page" : undefined}>
             Documents
           </Link>
         </Button>
