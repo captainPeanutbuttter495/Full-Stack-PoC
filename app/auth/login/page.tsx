@@ -43,7 +43,7 @@ function LoginPage() {
 
   return (
     <div className="h-[calc(100svh-4rem)] flex items-center justify-center">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm py-6">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">
             Sign In
