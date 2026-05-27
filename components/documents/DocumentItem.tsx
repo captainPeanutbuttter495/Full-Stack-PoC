@@ -13,6 +13,17 @@ type DocumentItemProps = {
 function DocumentItem({ doc }: DocumentItemProps) {
   const [owned, setOwned] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    const res = await fetch(`/api/download/${doc.id}`);
+    if (res.ok) {
+      const { signedUrl } = await res.json();
+      window.open(signedUrl, "_blank");
+    }
+    setDownloading(false);
+  };
 
   useEffect(() => {
     const fetchSubmissionStatus = async () => {
@@ -57,8 +68,8 @@ function DocumentItem({ doc }: DocumentItemProps) {
             <Loader2 className="animate-spin" />
           </Button>
         ) : owned ? (
-          <Button size="lg">
-          Download File <Download />
+          <Button size="lg" onClick={handleDownload} disabled={downloading}>
+            {downloading ? <Loader2 className="animate-spin" /> : <>Download File <Download /></>}
           </Button>
         ) : (
           <PaymentForm doc={doc} onSuccess={() => setOwned(true)} />

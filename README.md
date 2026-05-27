@@ -73,6 +73,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `DIRECT_URL` | CLI (`prisma.config.ts`) | Session-mode pooler for migrations (not `db pull` — see note above) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase clients | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase clients | Public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | `lib/supabase/admin.ts` | Service-role key for Storage signed URLs — **never expose to the client** |
 
 ## Commands
 
