@@ -16,15 +16,24 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "../ui/input-group";
-import React from "react";
+import React, { useState } from "react";
 import { Loader2 } from "lucide-react";
 
-type PaymentFormProps = { doc: Document };
+type PaymentFormProps = { doc: Document; onSuccess: () => void };
 
-function PaymentForm({ doc }: PaymentFormProps) {
+function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
+  const [open, setOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) {
+      setPaymentAmount(0);
+      setError(null);
+    }
+  };
 
   const handlePayment = async () => {
     setLoading(true);
@@ -41,8 +50,10 @@ function PaymentForm({ doc }: PaymentFormProps) {
       }),
     });
 
-    if (!res.ok) {
-      console.error("Payment failed:", res.statusText);
+    if (res.ok) {
+      setOpen(false);
+      onSuccess();
+    } else {
       setError("Payment failed. Please try again.");
     }
 
@@ -50,7 +61,7 @@ function PaymentForm({ doc }: PaymentFormProps) {
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" size="lg" className="w-full bg-card">
           Select{" "}

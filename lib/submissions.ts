@@ -33,3 +33,24 @@ export const createSubmission = async (
     return error instanceof Error ? error : new Error(String(error));
   }
 };
+
+export const checkSubmission = async (document_id: number, user_id: string) => {
+  try {
+    const submission = await prisma.submissions.findFirst({
+      where: { document_id, user_id },
+    });
+
+    if (!submission) {
+      return new Error("Submission not found");
+    }
+
+    return {
+      ...submission,
+      created_at: submission.created_at
+        ? submission.created_at.toISOString()
+        : null,
+    };
+  } catch (error) {
+    return error instanceof Error ? error : new Error(String(error));
+  }
+}
