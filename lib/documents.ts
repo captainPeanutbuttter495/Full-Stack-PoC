@@ -18,3 +18,19 @@ export const getAllDocuments = async () => {
     return error instanceof Error ? error : new Error(String(error));
   }
 };
+
+export const getDocumentById = async (id: number) => {
+  try {
+    const doc = await prisma.documents.findUnique({
+      where: { id },
+    });
+
+    return doc ? {
+      ...doc,
+      suggested_price: doc.suggested_price ? Number(doc.suggested_price) : null,
+      created_at: doc.created_at ? doc.created_at.toISOString() : null,
+    } : null;
+  } catch (error) {
+    return error instanceof Error ? error : new Error(String(error));
+  }
+}
