@@ -43,10 +43,7 @@ export default function DocumentsPage() {
           : documents.map((doc) => (
               <DocumentItem
                 key={doc.id}
-                category={doc.category}
-                title={doc.title}
-                description={doc.description}
-                suggested_price={doc.suggested_price}
+                doc={doc}
               />
             ))}
       </section>

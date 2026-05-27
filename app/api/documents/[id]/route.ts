@@ -1,8 +1,10 @@
 import {NextResponse} from "next/server"
 import {getDocumentById} from "@/lib/documents"
 
-export async function GET(request: Request, {params}: {params: {id: string}}) {
-  const id = parseInt(params.id, 10);
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: idParam } = await params;
+  const id = parseInt(idParam, 10);
+  
   if (isNaN(id)) {
     return NextResponse.json({error: "Invalid document ID"}, {status: 400});
   }
