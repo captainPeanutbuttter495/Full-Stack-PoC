@@ -8,18 +8,24 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 - **React 19.2.4**
 - **TypeScript 5.x** — strict mode
 - **Tailwind CSS v4** via `@tailwindcss/postcss`
+- **shadcn/ui** — Radix UI primitives + `class-variance-authority`, `clsx`, `tailwind-merge`
+- **Lucide React** — icon library
+- **Supabase** — auth and database (`@supabase/supabase-js`, `@supabase/ssr`)
 - **Geist + Geist Mono** — loaded via `next/font/google`
 - **ESLint 9** + **Prettier 3.x**
 
 ## What's Implemented
 
 - **Landing page** (`app/page.tsx`) — hero section, primary CTA linking to `/documents`, three-step explanation section, responsive down to 360px
+- **Documents page** (`app/documents/page.tsx`) — document listing and inline payment flow
 - **Shared components** — `components/wordmark.tsx`, `components/site-header.tsx` (with `activePage` prop), `components/site-footer.tsx`
-- **Design system** — Tailwind utility classes with arbitrary values matching the Claude Design prototype (oklch color palette, Geist typography)
+- **UI primitives** — `components/ui/button.tsx` (shadcn Button)
+- **Supabase integration** — `lib/supabase/client.ts` (browser), `lib/supabase/server.ts` (server-side), `lib/supabase/proxy.ts` + `proxy.ts`
+- **Utilities** — `lib/utils.ts` (`cn` helper)
+- **Design system** — global CSS variables for colors and typography; Tailwind utility classes with an oklch color palette and Geist typeface
 
 ## What's Planned (Not Yet Built)
 
-- `/documents` page with document grid and inline payment flow
 - Prisma + PostgreSQL (Docker) for data persistence
 - API routes: `GET /api/documents`, `GET /api/documents/[id]`, `POST /api/submissions`
 - Backend validation and tests
@@ -28,8 +34,8 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 ## Getting Started
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -37,23 +43,34 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Commands
 
 ```bash
-npm run dev          # Start dev server (Turbopack)
-npm run build        # Production build
-npm run start        # Serve production build
-npm run lint         # ESLint
-npm run format       # Prettier — auto-fix
-npm run format:check # Prettier — check only
+pnpm dev          # Start dev server (Turbopack)
+pnpm build        # Production build
+pnpm start        # Serve production build
+pnpm lint         # ESLint
+pnpm format       # Prettier — auto-fix
+pnpm format:check # Prettier — check only
 ```
 
 ## Project Structure
 
 ```
 app/
-  layout.tsx       # Root layout — font loading, metadata
-  page.tsx         # Landing page — hero, steps
-  globals.css      # Tailwind import + @theme (font config)
+  layout.tsx          # Root layout — font loading, metadata
+  page.tsx            # Landing page — hero, steps
+  globals.css         # Tailwind import + CSS variable definitions
+  documents/
+    page.tsx          # Documents page — listing and payment flow
 components/
-  wordmark.tsx     # Green dot + "Openleaf" brand mark
-  site-header.tsx  # Header with nav links (reusable across pages)
-  site-footer.tsx  # Footer with copyright line
+  wordmark.tsx        # Green dot + "Openleaf" brand mark
+  site-header.tsx     # Header with nav links (reusable across pages)
+  site-footer.tsx     # Footer with copyright line
+  ui/
+    button.tsx        # shadcn Button primitive
+lib/
+  utils.ts            # cn() helper (clsx + tailwind-merge)
+  supabase/
+    client.ts         # Supabase browser client
+    server.ts         # Supabase server client
+    proxy.ts          # Supabase proxy helper
+proxy.ts              # Proxy server entry point
 ```
