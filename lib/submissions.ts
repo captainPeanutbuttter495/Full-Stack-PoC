@@ -3,14 +3,14 @@ import { prisma } from "@/lib/prisma";
 export const createSubmission = async (
   document_id: number,
   amount: number,
-  email: string | null,
+  user_id: string | null,
 ) => {
   try {
     const submission = await prisma.submissions.create({
       data: {
         document_id,
         amount,
-        email,
+        user_id,
       },
     });
 
