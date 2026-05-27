@@ -33,7 +33,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <body>
-        <main className="h-svh w-svw">
+        <main className="h-svh w-svw overflow-x-hidden">
           <SiteHeader />
           {children}
           <SiteFooter />
