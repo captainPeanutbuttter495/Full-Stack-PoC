@@ -45,3 +45,18 @@ export const signOut = async (): Promise<AuthError | null> => {
   
   return null
 }
+
+export const continueWithGoogle = async (): Promise<AuthError | null> => {
+  const supabase = createClient()
+  
+  const {data, error} = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+  })
+
+  if (error) {
+    console.log('Error signing in with Google:', error.message);
+    return error
+  }
+  
+  return null
+}

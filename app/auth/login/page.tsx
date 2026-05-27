@@ -15,7 +15,7 @@ import {
 import { Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { signInWIthEmail } from "@/lib/auth";
+import { continueWithGoogle, signInWIthEmail } from "@/lib/auth";
 import { AuthError } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
@@ -83,16 +83,18 @@ function LoginPage() {
                 </InputGroupAddon>
               </InputGroup>
             </Field>
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full">
               Sign in
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex flex-col items-center gap-4">
-          <Button variant="outline" className="w-full bg-card">
+          <Button
+            variant="outline"
+            className="w-full bg-card"
+            onClick={() => continueWithGoogle()}
+          >
             Sign in with Google
           </Button>
           <p>

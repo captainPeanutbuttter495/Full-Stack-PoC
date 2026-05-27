@@ -15,7 +15,7 @@ import {
 import { Mail, Lock, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { signUpWithEmail } from "@/lib/auth";
+import { continueWithGoogle, signUpWithEmail } from "@/lib/auth";
 import { AuthError } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
@@ -125,7 +125,7 @@ function RegisterPage() {
           </form>
         </CardContent>
         <CardFooter className="flex flex-col items-center gap-4">
-          <Button variant="outline" className="w-full bg-card" disabled={loading}>
+          <Button variant="outline" className="w-full bg-card" disabled={loading} onClick={() => continueWithGoogle()}>
             Sign up with Google
           </Button>
           <p>
