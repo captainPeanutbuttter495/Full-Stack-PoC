@@ -43,9 +43,11 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 - **Utilities** (`lib/utils.ts`) — `cn()` helper
 
 ### Database
-- **Schema** (`prisma/schema.prisma`) — `documents` and `submissions` models
+- **Schema** (`prisma/schema.prisma`) — `documents` and `submissions` models; `submissions.user_id` is a plain `@db.Uuid` field — the FK to `auth.users` is enforced at the DB level by Supabase, not as a Prisma relation
 - **Config** (`prisma.config.ts`) — dual-URL setup: `DIRECT_URL` (session-mode, port 5432) for CLI operations; `DATABASE_URL` (transaction-mode pooler) injected at runtime via `PrismaClient` constructor
 - **Generated client** — output to `lib/generated/prisma/`
+
+> **Prisma + Supabase schema rule:** `prisma db pull` will always fail on this project because `submissions_user_id_fkey` crosses from the `public` schema into Supabase's `auth` schema. Adding `auth` to the datasource `schemas` list triggers multi-schema mode, which then requires `@@schema(...)` on every model. **Do not use `db pull`.** Make schema changes in two steps instead: (1) edit `prisma/schema.prisma` manually, (2) apply the SQL change in Supabase (dashboard or `prisma migrate dev` for `public`-only changes), then run `npx prisma generate`.
 
 ## What's Planned (Not Yet Built)
 
@@ -68,7 +70,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Variable | Used by | Purpose |
 |---|---|---|
 | `DATABASE_URL` | Runtime (`lib/prisma.ts`) | Transaction-mode pgBouncer pooler |
-| `DIRECT_URL` | CLI (`prisma.config.ts`) | Session-mode pooler for migrations/db pull |
+| `DIRECT_URL` | CLI (`prisma.config.ts`) | Session-mode pooler for migrations (not `db pull` — see note above) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase clients | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase clients | Public anon key |
 
@@ -82,8 +84,8 @@ pnpm lint             # ESLint
 pnpm format           # Prettier — auto-fix
 pnpm format:check     # Prettier — check only
 npx prisma generate   # Re-generate Prisma client after schema changes
-npx prisma migrate    # Run migrations (uses DIRECT_URL)
-npx prisma db pull    # Introspect DB and update schema (uses DIRECT_URL)
+npx prisma migrate dev --name <name>  # Create + apply a migration (uses DIRECT_URL)
+# NOTE: npx prisma db pull is NOT supported — see "Prisma + Supabase schema rule" above
 ```
 
 ## Project Structure
@@ -127,7 +129,7 @@ lib/
     server.ts             # Supabase server client (cookies)
     proxy.ts              # Session middleware helper
 prisma/
-  schema.prisma           # DB schema — documents, submissions models
+  schema.prisma           # DB schema — documents, submissions (user_id as plain UUID, FK owned by Supabase)
 prisma.config.ts          # Prisma CLI config — dual-URL, migrations path
 proxy.ts                  # Next.js middleware — Supabase session refresh
 ```
