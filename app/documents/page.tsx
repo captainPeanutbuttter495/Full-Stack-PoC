@@ -3,7 +3,6 @@ import { getAllDocuments } from "@/lib/documents";
 import { Card } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { Document } from "@/lib/types";
-import { PostgrestError } from "@supabase/supabase-js";
 import DocumentItem from "@/components/documents/DocumentItem";
 import DocumentItemSkeleton from "@/components/documents/DocumentItemSkeleton";
 
@@ -15,7 +14,7 @@ export default function DocumentsPage() {
     async function fetchDocuments() {
       const result = await getAllDocuments();
 
-      if (result instanceof Error || result instanceof PostgrestError) {
+      if (result instanceof Error) {
         console.error("Error fetching documents:", result);
       } else {
         setDocuments(result);
