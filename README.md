@@ -28,6 +28,9 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 ### API Routes
 - `GET /api/documents` — returns all documents ordered by creation date
 - `GET /api/documents/[id]` — returns a single document; 400 on invalid ID, 404 on missing
+- `POST /api/submissions` — records a purchase (requires auth); validates amount > 0
+- `GET /api/submissions/[id]` — checks if the current user owns a document (requires auth)
+- `GET /api/download/[documentId]` — verifies ownership then returns a 1-hour Supabase Storage signed URL (requires auth)
 
 ### Components
 - **Layout** — `components/site-header.tsx` (nav links + user auth dropdown), `components/site-footer.tsx`, `components/wordmark.tsx`
@@ -38,7 +41,8 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 - **Prisma client** (`lib/prisma.ts`) — singleton with `PrismaPg` adapter; uses `DATABASE_URL` (transaction-mode pooler) at runtime
 - **Document queries** (`lib/documents.ts`) — `getAllDocuments()`, `getDocumentById(id)`; serializes `Decimal` and `Date` types for JSON transport
 - **Auth helpers** (`lib/auth.ts`) — `signInWithEmail`, `signUpWithEmail`, `signOut`, `continueWithGoogle`
-- **Supabase clients** — `lib/supabase/client.ts` (browser), `lib/supabase/server.ts` (server/cookie-based), `lib/supabase/proxy.ts` (session middleware)
+- **Submission queries** (`lib/submissions.ts`) — `createSubmission()`, `checkSubmission()`
+- **Supabase clients** — `lib/supabase/client.ts` (browser), `lib/supabase/server.ts` (server/cookie-based), `lib/supabase/admin.ts` (service-role for Storage)
 - **Types** (`lib/types.ts`) — `Document`, `Submission`
 - **Utilities** (`lib/utils.ts`) — `cn()` helper
 
@@ -51,29 +55,64 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 
 ## What's Planned (Not Yet Built)
 
-- `POST /api/submissions` API route
+- Real payment processing (Stripe, etc.)
 - Backend validation and tests
-- Static mock PDF downloads in `public/files/`
+- Route protection middleware
 
 ## Getting Started
 
+### 1. Install dependencies
+
 ```bash
 pnpm install
-npx prisma generate   # generate Prisma client (required after install)
+```
+
+### 2. Create `.env.local`
+
+Create a `.env.local` file in the project root with the following variables. Get these values from your [Supabase project dashboard](https://supabase.com/dashboard) under **Project Settings → API** and **Project Settings → Database**.
+
+```env
+# Database — get from Supabase: Project Settings → Database → Connection string
+# Use "Transaction" mode URL (port 6543) for DATABASE_URL
+# Use "Session" mode URL (port 5432) for DIRECT_URL
+DATABASE_URL="postgresql://postgres.[project-ref]:[password]@aws-1-us-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres.[project-ref]:[password]@aws-1-us-west-1.pooler.supabase.com:5432/postgres"
+
+# Supabase — get from Project Settings → API
+NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+
+# Service role key — get from Project Settings → API → "service_role" (keep secret)
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
+```
+
+> **Never commit `.env.local`** — it contains secrets. It is already in `.gitignore`.
+
+### 3. Generate Prisma client
+
+```bash
+npx prisma generate
+```
+
+Run this after install and any time `prisma/schema.prisma` changes.
+
+### 4. Start the dev server
+
+```bash
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Environment variables
+### Environment variables reference
 
-| Variable | Used by | Purpose |
+| Variable | Used by | Where to get it |
 |---|---|---|
-| `DATABASE_URL` | Runtime (`lib/prisma.ts`) | Transaction-mode pgBouncer pooler |
-| `DIRECT_URL` | CLI (`prisma.config.ts`) | Session-mode pooler for migrations (not `db pull` — see note above) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase clients | Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase clients | Public anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | `lib/supabase/admin.ts` | Service-role key for Storage signed URLs — **never expose to the client** |
+| `DATABASE_URL` | Runtime (`lib/prisma.ts`) | Supabase → Database → Connection string → Transaction mode (port 6543) |
+| `DIRECT_URL` | CLI (`prisma.config.ts`) | Supabase → Database → Connection string → Session mode (port 5432) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase clients | Supabase → Project Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase clients | Supabase → Project Settings → API → Publishable key |
+| `SUPABASE_SERVICE_ROLE_KEY` | `lib/supabase/admin.ts` | Supabase → Project Settings → API → `service_role` key — **never expose to the client** |
 
 ## Commands
 
@@ -106,6 +145,11 @@ app/
     documents/
       route.ts            # GET /api/documents
       [id]/route.ts       # GET /api/documents/[id]
+    submissions/
+      route.ts            # POST /api/submissions
+      [id]/route.ts       # GET /api/submissions/[id]
+    download/
+      [documentId]/route.ts  # GET /api/download/[documentId]
 components/
   wordmark.tsx            # Green dot + "Openleaf" brand mark
   site-header.tsx         # Header with nav links and user dropdown
@@ -120,15 +164,16 @@ components/
     skeleton.tsx | textarea.tsx
 lib/
   prisma.ts               # PrismaClient singleton with PG adapter
-  documents.ts            # Server actions: getAllDocuments, getDocumentById
+  documents.ts            # getAllDocuments, getDocumentById
+  submissions.ts          # createSubmission, checkSubmission
   auth.ts                 # Supabase auth helpers
   types.ts                # Document, Submission types
   utils.ts                # cn() helper
-  generated/prisma/       # Auto-generated Prisma client (do not edit)
+  generated/prisma/       # Auto-generated Prisma client (do not edit; run npx prisma generate)
   supabase/
     client.ts             # Supabase browser client
     server.ts             # Supabase server client (cookies)
-    proxy.ts              # Session middleware helper
+    admin.ts              # Service-role client for Storage signed URLs
 prisma/
   schema.prisma           # DB schema — documents, submissions (user_id as plain UUID, FK owned by Supabase)
 prisma.config.ts          # Prisma CLI config — dual-URL, migrations path

@@ -15,7 +15,7 @@ import {
 import { Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { continueWithGoogle, signInWIthEmail } from "@/lib/auth";
+import { continueWithGoogle, signInWithEmail } from "@/lib/auth";
 import { AuthError } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
@@ -30,7 +30,7 @@ function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const result = await signInWIthEmail(formData.email, formData.password);
+    const result = await signInWithEmail(formData.email, formData.password);
 
     if (result instanceof AuthError) {
       setError(result.message);
