@@ -5,12 +5,14 @@ import { Button } from "../ui/button";
 import PaymentForm from "./PaymentForm";
 import { Download, FileIcon, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { User } from "@supabase/supabase-js";
 
 type DocumentItemProps = {
   doc: Document;
+  user: User | null;  
 };
 
-function DocumentItem({ doc }: DocumentItemProps) {
+function DocumentItem({ doc, user }: DocumentItemProps) {
   const [owned, setOwned] = useState(false);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -27,14 +29,17 @@ function DocumentItem({ doc }: DocumentItemProps) {
 
   useEffect(() => {
     const fetchSubmissionStatus = async () => {
+      if (!user) {
+        setLoading(false);
+        return
+      }
+
       try {
         const response = await fetch(`/api/submissions/${doc.id}`);
 
         if (!response.ok) {
-          console.error(
-            "Error fetching submission status:",
-            response.statusText,
-          );
+          const body = await response.json().catch(() => ({}));
+          console.error("Error fetching submission status:", body?.error ?? response.statusText);
           return;
         }
 

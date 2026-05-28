@@ -31,8 +31,13 @@ export async function GET(
 
     // 3. Fetch document for file_url
     const document = await getDocumentById(document_id);
+
     if (!document) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
+    }
+
+    if (document instanceof Error) {
+      return NextResponse.json({ error: "Error fetching document" }, { status: 500 });
     }
 
     // 4. Generate 1-hour signed URL via service-role client
