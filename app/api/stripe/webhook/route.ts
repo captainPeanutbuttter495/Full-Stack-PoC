@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
-import { createSubmission } from "@/lib/submissions";
+import { createSubmission, revokeSubmission } from "@/lib/submissions";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -24,7 +24,20 @@ export async function POST(request: Request) {
     const { document_id, user_id } = session.metadata!;
     const amount = (session.amount_total ?? 0) / 100;
 
-    await createSubmission(parseInt(document_id), amount, user_id, session.id);
+    await createSubmission(
+      parseInt(document_id),
+      amount,
+      user_id,
+      session.id,
+      session.payment_intent as string,
+    );
+  }
+
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object as Stripe.Charge;
+    if (charge.payment_intent) {
+      await revokeSubmission(charge.payment_intent as string);
+    }
   }
 
   return NextResponse.json({ received: true });

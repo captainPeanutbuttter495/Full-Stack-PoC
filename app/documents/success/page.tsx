@@ -15,10 +15,12 @@ export default async function SuccessPage({
   const { session_id } = await searchParams;
 
   let doc = null;
+  let amountPaid: number | null = null;
   if (session_id) {
     try {
       const session = await stripe.checkout.sessions.retrieve(session_id);
       const document_id = parseInt(session.metadata?.document_id ?? "");
+      amountPaid = session.amount_total != null ? session.amount_total / 100 : null;
       if (!isNaN(document_id)) {
         const result = await getDocumentById(document_id);
         if (result && !(result instanceof Error)) {
@@ -43,7 +45,9 @@ export default async function SuccessPage({
               <div className="flex justify-between items-center">
                 <p>{doc.category?.toUpperCase()}</p>
                 <p>
-                  suggested <strong>${doc.suggested_price}</strong>
+                  {amountPaid != null
+                    ? <>you paid <strong>${amountPaid.toFixed(2)}</strong></>
+                    : <>suggested <strong>${doc.suggested_price}</strong></>}
                 </p>
               </div>
             </CardHeader>

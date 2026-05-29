@@ -91,9 +91,9 @@ function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
         >
           <InputGroup>
             <InputGroupInput
-              placeholder="0.00"
+              placeholder="0.50"
               type="number"
-              min={0}
+              min={0.5}
               step={0.01}
               value={paymentAmount}
               onChange={(e) =>
@@ -113,7 +113,7 @@ function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
             </DialogClose>
             <Button
               variant="default"
-              disabled={paymentAmount <= 0 || loading}
+              disabled={paymentAmount < 0.5 || loading}
               type="submit"
             >
               {loading ? (
