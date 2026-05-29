@@ -32,8 +32,8 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
-      <body>
-        <main className="h-svh w-svw overflow-x-hidden">
+      <body className="overflow-x-hidden">
+        <main className="min-h-svh relative">
           <SiteHeader />
           {children}
           <SiteFooter />
