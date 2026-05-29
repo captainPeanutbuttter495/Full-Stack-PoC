@@ -4,13 +4,13 @@ The landing page is the entry point of the Pay-What-You-Want PoC. It explains th
 **Route:** `/` (`app/page.tsx`)
 ## Components
 
-| Component    | File                        | Reusable | Description                                             |
-| ------------ | --------------------------- | -------- | ------------------------------------------------------- |
-| `Home`       | `app/page.tsx`              | No       | Page composition — assembles header, hero, footer        |
-| `Hero`       | `app/page.tsx` (inline)     | No       | Eyebrow, display heading, lede, CTA, three-step section |
-| `SiteHeader` | `components/site-header.tsx` | Yes      | Wordmark + nav links; accepts `activePage` prop          |
-| `SiteFooter` | `components/site-footer.tsx` | Yes      | Copyright line                                           |
-| `Wordmark`   | `components/wordmark.tsx`    | Yes      | Green accent dot + "Openleaf" text                       |
+| Component    | File                         | Reusable | Description                                             |
+| ------------ | ---------------------------- | -------- | ------------------------------------------------------- |
+| `Home`       | `app/page.tsx`               | No       | Page composition — assembles header, hero, footer       |
+| `Hero`       | `app/page.tsx` (inline)      | No       | Eyebrow, display heading, lede, CTA, three-step section |
+| `SiteHeader` | `components/site-header.tsx` | Yes      | Wordmark + nav links; accepts `activePage` prop         |
+| `SiteFooter` | `components/site-footer.tsx` | Yes      | Copyright line                                          |
+| `Wordmark`   | `components/wordmark.tsx`    | Yes      | Green accent dot + "Openleaf" text                      |
 
 ## Layout
 
