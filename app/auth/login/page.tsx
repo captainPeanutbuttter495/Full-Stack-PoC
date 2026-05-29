@@ -34,10 +34,10 @@ function LoginPage() {
 
     if (result instanceof AuthError) {
       setError(result.message);
-    } else {
-      setError(null);
+      return;
     }
 
+    setError(null);
     router.push("/");
   };
 
