@@ -4,6 +4,7 @@ export const createSubmission = async (
   document_id: number,
   amount: number,
   user_id: string | null,
+  stripe_session_id?: string,
 ) => {
   try {
     const submission = await prisma.submissions.create({
@@ -11,6 +12,7 @@ export const createSubmission = async (
         document_id,
         amount,
         user_id,
+        ...(stripe_session_id ? { stripe_session_id } : {}),
       },
     });
 

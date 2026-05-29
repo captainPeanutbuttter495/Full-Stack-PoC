@@ -14,6 +14,7 @@ type DocumentItemProps = {
 
 function DocumentItem({ doc, user }: DocumentItemProps) {
   const [owned, setOwned] = useState(false);
+  const [amountPaid, setAmountPaid] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
@@ -43,8 +44,11 @@ function DocumentItem({ doc, user }: DocumentItemProps) {
           return;
         }
 
-        const { owned } = await response.json();
+        const { owned, submission } = await response.json();
         setOwned(owned);
+        if (owned && submission?.amount != null) {
+          setAmountPaid(Number(submission.amount));
+        }
       } catch (error) {
         console.error("Error fetching submission status:", error);
       } finally {
@@ -61,7 +65,9 @@ function DocumentItem({ doc, user }: DocumentItemProps) {
         <div className="flex justify-between items-center">
           <p>{doc.category?.toUpperCase()}</p>
           <p>
-            suggested <strong>${doc.suggested_price}</strong>
+            {owned && amountPaid != null
+              ? <>you paid <strong>${amountPaid.toFixed(2)}</strong></>
+              : <>suggested <strong>${doc.suggested_price}</strong></>}
           </p>
         </div>
       </CardHeader>
