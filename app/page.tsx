@@ -10,7 +10,7 @@ const STEPS = [
 
 function Hero() {
   return (
-    <section className="flex flex-1 flex-col pt-8 pb-4 w-full max-w-[1120px] mx-auto max-sm:pt-2 max-sm:pb-0">
+    <section className="flex h-[calc(100svh-4rem)] min-h-[400px] flex-col justify-center pt-8 pb-4 w-full max-w-[1120px] mx-auto max-sm:px-4 max-sm:pt-2 max-sm:pb-0">
       <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
         A small experiment in fair pricing
       </span>
