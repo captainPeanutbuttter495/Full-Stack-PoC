@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import SiteHeader from "@/components/site-header";
+import SiteFooter from "@/components/site-footer";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -30,7 +32,13 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <main className="h-svh w-svw overflow-x-hidden">
+          <SiteHeader />
+          {children}
+          <SiteFooter />
+        </main>
+      </body>
     </html>
   );
 }
