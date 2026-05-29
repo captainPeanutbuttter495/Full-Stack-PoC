@@ -7,7 +7,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const document_id = parseInt(id, 10);
 
-    if (typeof document_id !== "number") {
+    if (isNaN(document_id)) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     }
 

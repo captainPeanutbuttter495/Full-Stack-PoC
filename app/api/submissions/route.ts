@@ -35,7 +35,10 @@ export async function POST(request: Request) {
       throw submission;
     }
 
-    return NextResponse.json(submission);
+    return NextResponse.json(
+      { ...submission, download_url: `/api/download/${submission.document_id}` },
+      { status: 201 },
+    );
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : String(error) },

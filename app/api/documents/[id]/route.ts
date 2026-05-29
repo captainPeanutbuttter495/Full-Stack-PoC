@@ -10,6 +10,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 
   const document = await getDocumentById(id);
+  if (document instanceof Error) {
+    return NextResponse.json({ error: "Failed to fetch document" }, { status: 500 });
+  }
   if (!document) {
     return NextResponse.json({error: "Document not found"}, {status: 404});
   }

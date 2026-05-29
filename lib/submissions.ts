@@ -16,6 +16,7 @@ export const createSubmission = async (
 
     return {
       ...submission,
+      amount: Number(submission.amount),
       created_at: submission.created_at
         ? submission.created_at.toISOString()
         : null,
