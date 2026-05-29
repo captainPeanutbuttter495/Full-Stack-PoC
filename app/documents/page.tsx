@@ -4,13 +4,26 @@ import { useEffect, useState } from "react";
 import { Document } from "@/lib/types";
 import DocumentItem from "@/components/documents/DocumentItem";
 import DocumentItemSkeleton from "@/components/documents/DocumentItemSkeleton";
+import { createClient } from "@/lib/supabase/client";
+import { User } from "@supabase/supabase-js";
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+
+  const fetchUser = async () => {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    setUser(session?.user ?? null);
+  };
 
   useEffect(() => {
-    async function fetchDocuments() {
+    const fetchDocuments = async () => {
+      await fetchUser();
+      
       try {
         const res = await fetch("/api/documents");
         if (!res.ok)
@@ -22,7 +35,7 @@ export default function DocumentsPage() {
       } finally {
         setIsLoading(false);
       }
-    }
+    };
     fetchDocuments();
   }, []);
 
@@ -40,15 +53,7 @@ export default function DocumentsPage() {
           ? Array.from({ length: 6 }).map((_, i) => (
               <DocumentItemSkeleton key={i} />
             ))
-          : documents.map((doc) => (
-              <DocumentItem
-                key={doc.id}
-                category={doc.category}
-                title={doc.title}
-                description={doc.description}
-                suggested_price={doc.suggested_price}
-              />
-            ))}
+          : documents.map((doc) => <DocumentItem key={doc.id} doc={doc} user={user} />)}
       </section>
     </div>
   );

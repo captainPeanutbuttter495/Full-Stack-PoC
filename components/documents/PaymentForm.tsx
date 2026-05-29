@@ -16,25 +16,52 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "../ui/input-group";
-import React from "react";
+import React, { useState } from "react";
 import { Loader2 } from "lucide-react";
 
-type PaymentFormProps = Pick<
-  Document,
-  "title" | "description" | "suggested_price" | "category"
->;
+type PaymentFormProps = { doc: Document; onSuccess: () => void };
 
-function PaymentForm({
-  title,
-  description,
-  suggested_price,
-  category,
-}: PaymentFormProps) {
+function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
+  const [open, setOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) {
+      setPaymentAmount(0);
+      setError(null);
+    }
+  };
+
+  const handlePayment = async () => {
+    setLoading(true);
+    setError(null);
+
+    const res = await fetch("/api/submissions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        document_id: doc.id,
+        amount: paymentAmount,
+      }),
+    });
+
+    if (res.ok) {
+      setOpen(false);
+      onSuccess();
+    } else {
+      setError("Payment failed. Please try again.");
+    }
+
+    setLoading(false);
+  };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" size="lg" className="w-full bg-card">
           Select{" "}
@@ -43,52 +70,63 @@ function PaymentForm({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="">
           <div className="w-full flex items-center justify-between font-mono">
-            <p>{category?.toUpperCase()}</p>
+            <p>{doc.category?.toUpperCase()}</p>
           </div>
-          <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
+          <DialogTitle className="text-xl font-bold">{doc.title}</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            {description}
+            {doc.description}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
           <p className="font-bold">Enter your payment amount:</p>
           <p className="font-mono text-xs text-muted-foreground">
-            Suggested price: <strong>${suggested_price}</strong>
+            Suggested price: <strong>${doc.suggested_price}</strong>
           </p>
         </div>
-        <InputGroup>
-          <InputGroupInput
-            placeholder="0.00"
-            type="number"
-            min={0}
-            step={0.01}
-            value={paymentAmount}
-            onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
-          />
-          <InputGroupAddon>
-            <p>$</p>
-          </InputGroupAddon>
-        </InputGroup>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
-          <Button
-            variant="default"
-            disabled={paymentAmount <= 0 || loading}
-            onClick={() => {
-              setLoading(true);
-            }}
-          >
-            {loading ? (
-              <>
-                Processing... <Loader2 className="animate-spin" />
-              </>
-            ) : (
-              "Submit Payment"
-            )}
-          </Button>
-        </DialogFooter>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handlePayment();
+          }}
+          className='flex flex-col gap-4'
+        >
+          <InputGroup>
+            <InputGroupInput
+              placeholder="0.00"
+              type="number"
+              min={0}
+              step={0.01}
+              value={paymentAmount}
+              onChange={(e) =>
+                setPaymentAmount(parseFloat(e.target.value) || 0)
+              }
+            />
+            <InputGroupAddon>
+              <p>$</p>
+            </InputGroupAddon>
+          </InputGroup>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" type="button">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              variant="default"
+              disabled={paymentAmount <= 0 || loading}
+              type="submit"
+            >
+              {loading ? (
+                <>
+                  Processing... <Loader2 className="animate-spin" />
+                </>
+              ) : (
+                "Submit Payment"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

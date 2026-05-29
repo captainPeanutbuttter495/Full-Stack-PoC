@@ -1,7 +1,7 @@
 import {createClient} from '@/lib/supabase/client';
 import {AuthError} from '@supabase/supabase-js';
 
-export const signInWIthEmail = async (email: string, password: string): Promise<AuthError | null> => {
+export const signInWithEmail = async (email: string, password: string): Promise<AuthError | null> => {
   const supabase = createClient()
 
   const {data, error} = await supabase.auth.signInWithPassword({

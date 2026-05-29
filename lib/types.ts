@@ -11,7 +11,7 @@ export type Document = {
 export type Submission = {
   id: string
   document_id: number
+  user_id: string | null
   amount: number
-  email: string | null
   created_at: string | null
 }
