@@ -50,3 +50,83 @@ export function fkViolation() {
     code: "P2003",
   });
 }
+
+/**
+ * A Prisma "P2002" unique-constraint violation. The Stripe webhook relies on
+ * the unique `stripe_session_id` / `stripe_payment_intent_id` columns to stay
+ * idempotent, so a duplicate delivery surfaces as P2002 from `prisma...create`.
+ */
+export function uniqueViolation() {
+  return Object.assign(new Error("Unique constraint failed"), {
+    code: "P2002",
+  });
+}
+
+/** Build a POST Request for the Stripe checkout route. */
+export function postCheckout(body: unknown, origin = "http://localhost:3000") {
+  return new Request("http://localhost/api/stripe/checkout", {
+    method: "POST",
+    headers: { "content-type": "application/json", origin },
+    body: JSON.stringify(body),
+  });
+}
+
+/** Build a POST Request for the Stripe webhook route (raw text body). */
+export function webhookRequest(rawBody = "{}", sig = "test_signature") {
+  return new Request("http://localhost/api/stripe/webhook", {
+    method: "POST",
+    headers: { "stripe-signature": sig },
+    body: rawBody,
+  });
+}
+
+/**
+ * Build a mocked Supabase service-role (admin) client whose storage layer
+ * returns `signedUrlResult` from `createSignedUrl`. Returns the inner mocks so
+ * tests can assert `from("documents")` and `createSignedUrl(path, 3600)`.
+ */
+export function makeAdminClient(
+  signedUrlResult: { data: { signedUrl: string } | null; error: unknown },
+) {
+  const createSignedUrl = vi.fn().mockResolvedValue(signedUrlResult);
+  const from = vi.fn().mockReturnValue({ createSignedUrl });
+  const adminClient = { storage: { from } };
+  return { adminClient, from, createSignedUrl };
+}
+
+/** A Stripe `checkout.session.completed` event, shaped as the webhook reads it. */
+export function checkoutCompletedEvent({
+  document_id = 1,
+  user_id = TEST_USER_ID,
+  amount_total = 500,
+  session_id = "cs_test_123",
+  payment_intent = "pi_test_123",
+}: {
+  document_id?: number;
+  user_id?: string;
+  amount_total?: number | null;
+  session_id?: string;
+  payment_intent?: string;
+} = {}) {
+  return {
+    type: "checkout.session.completed",
+    data: {
+      object: {
+        id: session_id,
+        amount_total,
+        payment_intent,
+        metadata: { document_id: String(document_id), user_id },
+      },
+    },
+  };
+}
+
+/** A Stripe `charge.refunded` event. Pass `payment_intent: null` to omit it. */
+export function chargeRefundedEvent({
+  payment_intent = "pi_test_123",
+}: { payment_intent?: string | null } = {}) {
+  return {
+    type: "charge.refunded",
+    data: { object: { payment_intent } },
+  };
+}
