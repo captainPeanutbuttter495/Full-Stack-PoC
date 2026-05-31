@@ -233,3 +233,57 @@ This gives you everything needed to test:
 - **Server functions** (`lib/documents.ts`) with mocked Prisma via `vi.hoisted()`
 - **API route handlers** (`app/api/documents/`) by calling exported functions directly
 - **React components** (`components/documents/`) with render + query + interact patterns
+
+---
+
+### API Route Tests (Vitest) — In Place
+
+Route-handler unit tests live in `tests/api/**/*.test.ts` and call the exported
+handlers directly (no HTTP server). All external dependencies are mocked — **no real
+Stripe, Supabase, database, or network is touched.** Shared fixtures live in
+`tests/api/_helpers.ts`.
+
+**Run:** `pnpm test` (alias `pnpm test:api`). `vitest.config.ts` excludes `e2e/` so
+Playwright specs never run under Vitest.
+
+**Mocking pattern:** `vi.hoisted()` + `vi.mock()` for `@/lib/prisma` (named export
+`prisma`), `@/lib/supabase/server`, `@/lib/supabase/admin`, `@/lib/documents`, and the
+Stripe SDK. The Stripe SDK mock uses a **regular function** (not an arrow) so
+`new Stripe(...)` works: `vi.mock("stripe", () => ({ default: vi.fn(function () { return stripeMock; }) }))`.
+
+#### Coverage by route
+
+| Test file | Route | Cases |
+|---|---|---|
+| `tests/api/documents.test.ts` | `GET /api/documents`, `GET /api/documents/[id]` | list + serialization, 500 on DB error, 200/404/400 by id |
+| `tests/api/submissions.post.test.ts` | `POST /api/submissions` | 201 valid, 400 validation (amount ≤ 0 / missing fields), validation-before-auth, 401 unauth, 404 missing doc |
+| `tests/api/stripe.checkout.test.ts` | `POST /api/stripe/checkout` | 401 unauth (incl. malformed body), 400 (`amount=0`, `amount<0.5`, missing amount/doc_id), $0.50 boundary accepted, cents conversion, metadata pass-through, 404 missing doc |
+| `tests/api/stripe.webhook.test.ts` | `POST /api/stripe/webhook` | 400 invalid signature (no DB write), unhandled event (no write), `checkout.session.completed` → create, duplicate-delivery P2002 no-crash, `charge.refunded` → revoke, refund w/o `payment_intent` (no write) |
+| `tests/api/download.test.ts` | `GET /api/download/[documentId]` | 400 bad id, 401 unauth, 403 no active submission, 403 refunded (active-only filter), 404 missing doc, 200 signed URL, 500 storage failure |
+
+#### ⚠️ Pinned Stripe-route behaviors (current contract, differs from `/api/submissions`)
+
+These are asserted as the routes behave **today**, and documented inline so the
+difference from the original assignment route is intentional, not accidental:
+
+- **Auth before validation.** `/api/stripe/checkout` checks auth first, so an
+  unauthenticated request with a malformed body returns **401** (not 400).
+  `/api/submissions` validates first → 400.
+- **$0.50 minimum.** `/api/stripe/checkout` rejects `amount < 0.5` (Stripe's minimum
+  charge), whereas `/api/submissions` rejects `amount <= 0`.
+- **Webhook idempotency.** The duplicate-delivery test only proves the route does not
+  crash and still returns 200 (P2002 from the unique `stripe_session_id` /
+  `stripe_payment_intent_id` columns is caught by `createSubmission`'s generic catch and
+  returned as a value, not rethrown). It does **not** prove "no duplicate row" — that
+  guarantee comes from the DB unique constraint.
+
+#### Access-control guardrails verified
+
+`GET /api/download/[documentId]` is the boundary that decides whether a signed Supabase
+URL is issued. Tests confirm: unauthenticated → 401 (no lookup/storage reached); no
+active submission → 403 (no signed URL); refunded/revoked submission → 403 (the
+`status: "active"` filter excludes it); invalid webhook signature mutates nothing.
+
+> **Future:** Stripe test-mode integration (`stripe listen` + real test keys against a
+> real DB) and a Playwright E2E for the checkout redirect flow. The integration layer is
+> the only one that can truly prove webhook idempotency / no-duplicate-row.
