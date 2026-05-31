@@ -52,3 +52,5 @@ next-env.d.ts
 .obsidian
 
 .windsurf
+playwright-report/
+test-results/
