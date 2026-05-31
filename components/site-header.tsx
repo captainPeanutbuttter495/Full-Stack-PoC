@@ -26,6 +26,13 @@ export default function SiteHeader() {
   const isDocs = pathname.startsWith("/documents");
 
   const [user, setUser] = useState<User | null>(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 0);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -49,7 +56,7 @@ export default function SiteHeader() {
   };
 
   return (
-    <header className="flex items-center justify-between gap-3 border-b min-w-0 w-full p-4 sticky top-0 z-10 bg-background">
+    <header className={`flex items-center justify-between gap-3 min-w-0 w-full p-4 sticky top-0 z-10 bg-background transition-[border-color] duration-200 border-b ${!isHome || scrolled ? "border-border" : "border-transparent"}`}>
       <Wordmark />
       <nav className="flex gap-4" aria-label="Primary">
         <Button variant={isHome ? "default" : "ghost"} asChild>

@@ -39,7 +39,7 @@ function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
     setLoading(true);
     setError(null);
 
-    const res = await fetch("/api/submissions", {
+    const res = await fetch("/api/stripe/checkout", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -51,13 +51,12 @@ function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
     });
 
     if (res.ok) {
-      setOpen(false);
-      onSuccess();
+      const { url } = await res.json();
+      window.location.href = url;
     } else {
-      setError("Payment failed. Please try again.");
+      setError("Failed to start payment. Please try again.");
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -92,9 +91,9 @@ function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
         >
           <InputGroup>
             <InputGroupInput
-              placeholder="0.00"
+              placeholder="0.50"
               type="number"
-              min={0}
+              min={0.5}
               step={0.01}
               value={paymentAmount}
               onChange={(e) =>
@@ -114,7 +113,7 @@ function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
             </DialogClose>
             <Button
               variant="default"
-              disabled={paymentAmount <= 0 || loading}
+              disabled={paymentAmount < 0.5 || loading}
               type="submit"
             >
               {loading ? (
