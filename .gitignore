@@ -45,6 +45,9 @@ next-env.d.ts
 .design-reference/
 
 .claude
+.agents
+.windsurf
+
 /lib/generated/prisma
 
 .obsidian
