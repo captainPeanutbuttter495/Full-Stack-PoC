@@ -117,8 +117,15 @@ Run this after install and whenever `prisma/schema.prisma` changes.
 Stripe delivers webhook events to a public URL. In development, use the Stripe CLI to forward them to your local server.
 
 **Install the Stripe CLI** (if not already):
+
+macOS:
 ```bash
 brew install stripe/stripe-cli/stripe
+```
+
+Windows:
+```powershell
+npm install -g @stripe/cli
 ```
 
 **Log in:**
@@ -152,7 +159,25 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Use any future expiry, any 3-digit CVC, and any postcode.
 
-### 6. Set up Stripe webhooks (production)
+### 6. Set up Stripe webhooks (deployed / staging)
+
+The Stripe CLI is only needed for local development — Stripe's servers cannot reach `localhost`, so the Dashboard won't accept it as an endpoint. For any deployed URL (including Vercel preview deployments), register the endpoint directly in the Dashboard instead:
+
+1. Go to **Stripe Dashboard → Developers → Webhooks → Add endpoint**
+2. Set the URL to your deployed webhook route:
+   ```
+   https://your-deployed-url.com/api/stripe/webhook
+   ```
+3. Select events: `checkout.session.completed`, `charge.refunded`
+4. Copy the signing secret (`whsec_...`) and set it as `STRIPE_WEBHOOK_SECRET` in your deployment's environment variables (e.g. Vercel → Project Settings → Environment Variables)
+
+> **Test mode works here too.** You can register a staging/preview URL under test mode API keys — test card numbers still work and no real money is charged. This lets you skip running the CLI entirely for non-local testing.
+
+> **Two separate secrets:** the CLI prints its own `whsec_` for local dev; the Dashboard generates a different one for each registered endpoint. Use the CLI secret in `.env.local` and the Dashboard secret in your deployed env vars.
+
+**Alternative for local dev without the CLI:** tools like [ngrok](https://ngrok.com) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) create a public URL that tunnels to localhost — register that URL in the Dashboard and webhooks fire without the CLI running.
+
+### 7. Set up Stripe webhooks (production)
 
 1. Go to **Stripe Dashboard → Developers → Webhooks → Add endpoint**
 2. Set the URL to `https://your-domain.com/api/stripe/webhook`
