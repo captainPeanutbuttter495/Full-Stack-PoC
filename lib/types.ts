@@ -6,6 +6,7 @@ export type Document = {
   category: string | null
   suggested_price: number | null
   created_at: string | null
+  isOwned: boolean
 }
 
 export type Submission = {

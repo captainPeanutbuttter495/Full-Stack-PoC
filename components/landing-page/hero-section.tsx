@@ -114,9 +114,6 @@ export function HeroSection() {
             <Button size="lg" className="h-[52px] rounded-[11px] px-6 text-[15.5px] max-sm:w-full" asChild>
               <Link href="/documents">Browse Documents <ArrowRight size={17} /></Link>
             </Button>
-            <span className="font-mono text-xs text-muted-foreground max-sm:w-full max-sm:text-center">
-              6 seeded documents · proof of concept
-            </span>
           </div>
         </motion.div>
 
