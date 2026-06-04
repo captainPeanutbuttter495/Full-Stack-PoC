@@ -89,7 +89,7 @@ High-level summary of functions.
 
 * **Landing page:** Explains the PWYW model and provides a single CTA to begin the flow.
 
-* **Documents browse:** Displays all available documents with title, description, category, and suggested price.
+* **Documents browse:** Displays all available documents with title, description, category, and suggested price. Supports tab-based filtering ("All" / "Owned") and real-time keyword search across title, description, and category.
 
 * **Document selection and payment:** Allows the user to select a document and enter an amount inline via a dialog.
 
@@ -210,6 +210,16 @@ Implementation status is noted where the current state on branch `production-mai
 * System requirement 1.2.3: Each document card shall include a 'Select' button that initiates the payment flow for that document. **Status: Implemented.** The `DocumentItem` card renders a "Select" button that opens a `PaymentForm` dialog.
 
 * System requirement 1.2.4: The endpoint GET /api/documents shall exist and return document data as JSON. **Status: Implemented.** Returns all documents ordered by `created_at DESC`. `Decimal` fields are serialized to `number`; `Date` fields to ISO 8601 strings.
+
+* System requirement 1.2.5: The documents page shall render an "All" / "Owned" tab filter (shadcn `Tabs` component). "All" shows all documents; "Owned" shows only documents for which the authenticated user has an active submission. Filtering is applied client-side on data already fetched. **Status: Implemented on `feature/doc-filter`.**
+
+* System requirement 1.2.6: The documents page shall include a keyword search input that filters visible documents by matching the query against `title`, `description`, and `category` (case-insensitive, contains). Results update in real time as the user types. **Status: Implemented on `feature/doc-filter`.**
+
+* System requirement 1.2.7: The search input (using the `InputGroup` component) shall display a live count of matching documents (e.g., "12 results") to the right of the input field. The count reflects the combined effect of the active tab filter and the current search query. **Status: Implemented on `feature/doc-filter`.**
+
+* System requirement 1.2.8: When no documents match the active filter and search query, the page shall render a centered empty state ("No documents found") in place of the document grid. **Status: Implemented on `feature/doc-filter`.**
+
+* System requirement 1.2.9: The endpoint GET /api/documents shall read the authenticated user's session and include an `isOwned: boolean` field on each document, derived by checking for an active `submissions` row (`status = "active"`) for that `user_id`. Unauthenticated requests receive `isOwned: false` for all documents. **Status: Implemented on `feature/doc-filter`.**
 
 ## **3.2 System Feature 2 — Document Selection and Payment**
 
@@ -354,6 +364,7 @@ Consolidated view of the user-facing requirements above, with priorities, author
 | 5 | 3.3.3 The system shall reveal a download button only after a valid submission is accepted by the server. | After 201 Created, the PaymentForm calls onSuccess(); DocumentItem checks ownership on mount and renders DownloadButton for owned documents; DownloadButton fetches a signed URL from GET /api/download/[documentId]. | High | Done (production-main) | M.G. / D.C. |
 | 6 | 3.4.1 The system shall be usable on mobile viewports (≥ 360px). | User on a phone visits the site. The landing page, documents grid, and payment dialog all reflow without horizontal scroll or clipped controls. | Medium | Done | M.G. / D.C. |
 | 7 | 3.5.1–3.5.5 The system shall support user authentication via email/password and Google OAuth. | User registers or signs in. The header reflects their session. Middleware refreshes the session on every request. | Medium | Done | M.G. / D.C. |
+| 8 | 3.1.2 (ext.) The system shall allow authenticated users to filter documents by ownership and search by keyword. | User navigates to /documents. They switch the "Owned" tab to see only their purchased documents, or type in the search bar to narrow results in real time. The result count updates alongside the grid. | Medium | Done — `feature/doc-filter` | D.C. |
 
 # **4\. Nonfunctional Requirements**
 
@@ -440,7 +451,7 @@ Design direction: clean, restrained, single dominant CTA per page. OKLCH-based g
 | Question                                                                              | Answer                                                                                                                                                                                                                                                  | Date Answered |
 | :------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :------------ |
 | Does Leo expect a deployed instance, or is a local-only PoC acceptable?               | Pending. Deployment is a stretch goal per the assignment; will revisit on Day 12 based on schedule.                                                                                                                                                     | —             |
-| Should the documents page support sorting or filtering by category / suggested price? | Pending. Not required by the spec; will implement only if core work is complete.                                                                                                                                                                        | —             |
+| Should the documents page support sorting or filtering by category / suggested price? | Resolved. Tab-based ownership filter ("All" / "Owned") and keyword search across title, description, and category implemented on `feature/doc-filter`. Filtering is client-side; ownership is derived from a Prisma submissions join in `GET /api/documents`. | 2026-06-04 |
 | What format should the seeded sample PDFs take?                                       | Resolved. Static placeholder PDFs (1–2 page lorem ipsum). The assignment explicitly states document content does not matter.                                                                                                                            | May 22, 2026  |
 | Should anonymous submissions be permitted, or is auth required to submit?             | Resolved. Submissions require authentication on all active branches. `POST /api/submissions` returns 401 for unauthenticated requests. The `user_id` column remains nullable at the schema level but the route enforces auth before any database write. | June 4, 2026  |
 | Should confirm-password validation be added to the register page?                     | Pending. The form renders both fields but does not validate they match before submitting.                                                                                                                                                               | —             |
@@ -469,6 +480,8 @@ The following are explicitly out of scope for this PoC, per the assignment brief
 
 * Submission validation, persistence, and download access — implemented on `production-main` (direct-submission flow). See Section 3.3.
 
+* Document search and ownership filter — tab filter ("All" / "Owned") and keyword search across title, description, and category implemented on `feature/doc-filter`. `GET /api/documents` extended to include `isOwned: boolean` per document via a Prisma submissions join. See Section 3.1.2.
+
 ## **Implemented on `feature/transaction-flow` — pending merge to production-main**
 
 * Stripe payment integration — `POST /api/stripe/checkout` creates a Stripe Checkout Session; `POST /api/stripe/webhook` handles `checkout.session.completed` (creates submission) and `charge.refunded` (revokes access). The `submissions` table gains `status`, `stripe_session_id`, and `stripe_payment_intent_id` columns.
@@ -486,7 +499,5 @@ The following are explicitly out of scope for this PoC, per the assignment brief
 * Email and name capture before download (assignment stretch goal).
 
 * Confirm-password validation on the register page.
-
-* Search and category filter on documents page (assignment stretch goal).
 
 * Admin seed script (assignment stretch goal).
