@@ -22,7 +22,7 @@ function HeroVisual() {
     >
       {/* back card 2 */}
       <motion.div
-        className="absolute top-[20px] -right-[60px] w-[280px] rounded-[14px] border border-border bg-card p-[18px] shadow-sm"
+        className="absolute top-[20px] left-[-80px] w-[280px] rounded-[14px] border border-border bg-card p-[18px] shadow-sm"
         style={{ rotate: 7, opacity: 0.42 }}
         animate={{ y: [0, -13, 0] }}
         transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
@@ -38,7 +38,7 @@ function HeroVisual() {
 
       {/* back card 1 */}
       <motion.div
-        className="absolute top-[50px] right-[10px] w-[280px] rounded-[14px] border border-border bg-card p-[18px] shadow-sm"
+        className="absolute top-[40px] right-[-80px] w-[280px] rounded-[14px] border border-border bg-card p-[18px] shadow-sm"
         style={{ rotate: -3, opacity: 0.92 }}
         animate={{ y: [0, -7, 0] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
