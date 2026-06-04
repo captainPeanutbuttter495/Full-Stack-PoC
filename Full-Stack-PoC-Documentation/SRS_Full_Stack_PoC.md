@@ -7,7 +7,7 @@
 | **Document status**   | IN PROGRESS                   |
 | **Document owner**    | Matthew Garcia                |
 | **Technical writers** | Matthew Garcia, Duane Cabahug |
-| **Last updated**      | 2026-05-29                    |
+| **Last updated**      | 2026-06-04                    |
 
 # **1\. Introduction**
 
@@ -105,9 +105,9 @@ High-level summary of functions.
 
 Two user classes exist based on authentication state:
 
-* **Unauthenticated visitor:** Can browse the landing page and documents page. May complete the payment flow; their submission will have `user_id = null`. Can navigate to `/auth/login` or `/auth/register`.
+* **Unauthenticated visitor:** Can browse the landing page. The `/documents` page requires authentication; unauthenticated visitors are redirected. Can navigate to `/auth/login` or `/auth/register`.
 
-* **Authenticated user:** Has completed email/password registration or Google OAuth. The header displays their email initial as an avatar. Their `user_id` (Supabase UUID) is attached to any submission they make. Can sign out from the header dropdown.
+* **Authenticated user:** Has completed email/password registration or Google OAuth. The header displays their email initial as an avatar. Their `user_id` (Supabase UUID) is attached to any submission they make. Can sign out from the header dropdown. Submissions require authentication; anonymous submissions are rejected with 401.
 
 Within each class, two behavioral subtypes inform UI decisions:
 
@@ -237,35 +237,51 @@ Implementation status is noted where the current state on branch `production-mai
 
 *Authors: Matthew Garcia, Duane Cabahug*
 
-**Current status:** The submission and download flow is **not yet merged to `production-main`**. The implementation exists on the `feature/transaction-flow` branch (commits: `f95ffb9 Create add submission route`, `5791e3e Add user id to submission`, `11b8fd4 Add ownership check`, `b96e785 Add download api route`, `cba4179 Fix error handling`). The `PaymentForm` component on `production-main` sets a `loading` spinner on click but does not POST to any endpoint.
+**Current status — two tiers of implementation:**
+
+* **Implemented on `production-main` (direct-submission flow):** `POST /api/submissions`, `GET /api/download/[documentId]`, `GET /api/submissions/[id]` (ownership check), and the `PaymentForm` component that POSTs directly to `/api/submissions`. The `DocumentItem` component checks ownership on mount and renders a `DownloadButton` for owned documents.
+
+* **Implemented on `feature/transaction-flow`, not yet merged to `production-main` (Stripe-backed flow):** `POST /api/stripe/checkout`, `POST /api/stripe/webhook`, `app/documents/success/page.tsx`, signed Supabase Storage URLs (1-hour TTL). On this branch, `PaymentForm` redirects to Stripe checkout instead of POSTing directly; submissions are created by the webhook after payment, not by the client. The `submissions` schema is extended with `status` (default `"active"`), `stripe_session_id` (unique), and `stripe_payment_intent_id` (unique) columns. A `charge.refunded` webhook event sets `status` to `"refunded"`, revoking download access.
 
 ### **3.3.1 User Requirement: The user shall be able to submit a payment amount and have it validated server-side.**
 
-* System requirement 3.1.1: The endpoint POST /api/submissions shall accept a JSON body of the shape { documentId: number, amount: number }. **Status: Not yet on production-main. In progress on feature/transaction-flow.**
+* System requirement 3.1.1: The endpoint POST /api/submissions shall accept a JSON body of the shape { documentId: number, amount: number }. **Status: Implemented on production-main.** The route accepts `document_id` and `amount` (snake\_case). Requires an authenticated session; returns 401 if not authenticated.
 
-* System requirement 3.1.2: The endpoint shall validate that documentId is present and a positive integer; absent or malformed values shall produce a 400 response. **Status: Not yet on production-main.**
+* System requirement 3.1.2: The endpoint shall validate that documentId is present and a positive integer; absent or malformed values shall produce a 400 response. **Status: Implemented on production-main.**
 
-* System requirement 3.1.3: The endpoint shall validate that amount is present and a finite number strictly greater than zero; failures shall produce a 400 response. **Status: Not yet on production-main.**
+* System requirement 3.1.3: The endpoint shall validate that amount is present and a finite number strictly greater than zero; failures shall produce a 400 response. **Status: Implemented on production-main.**
 
-* System requirement 3.1.4: The endpoint shall verify that a Document row with the given documentId exists; if not, it shall return 404\. **Status: Not yet on production-main.**
+* System requirement 3.1.4: The endpoint shall verify that a Document row with the given documentId exists; if not, it shall return 404\. **Status: Implemented on production-main.** A Prisma P2003 foreign-key violation (document not found) is caught and returned as 404.
 
-* System requirement 3.1.5: All validation shall execute before any database write. **Status: Not yet on production-main.**
+* System requirement 3.1.5: All validation shall execute before any database write. **Status: Implemented on production-main.** Input validation runs before the auth check; auth runs before the database write.
 
 ### **3.3.2 User Requirement: A valid submission shall be persisted to the database.**
 
-* System requirement 3.2.1: On successful validation, the endpoint shall insert a new Submission row containing the documentId, amount, and an auto-generated createdAt timestamp. If the request is authenticated, the user's Supabase UUID shall be stored in `user_id`. **Status: Not yet on production-main.**
+* System requirement 3.2.1: On successful validation, the endpoint shall insert a new Submission row containing the documentId, amount, and an auto-generated createdAt timestamp. The request must be authenticated; the user's Supabase UUID is stored in `user_id`. **Status: Implemented on production-main.**
 
-* System requirement 3.2.2: The endpoint shall return a 201 response with a body of the shape { success: true, downloadUrl: string, submissionId: string }. Note: `submissionId` is a UUID string, not a number. **Status: Not yet on production-main.**
+* System requirement 3.2.2: The endpoint shall return a 201 response with a body containing the submission object and a download URL. **Deviation:** The actual response is the full submission row (id, document\_id, user\_id, amount, created\_at) plus a `download_url` field (snake\_case) pointing to `GET /api/download/[documentId]`. The shape `{ success: true, downloadUrl, submissionId }` originally specified was not used. **Status: Implemented on production-main (with deviation).**
 
 * System requirement 3.2.3: The Submission table shall maintain a foreign-key constraint to the Document table at the database level; orphaned submissions shall be impossible. **Status: Implemented at the schema level.** The `documents` relation uses `onDelete: Cascade`.
 
 ### **3.3.3 User Requirement: The user shall be able to download the document after a successful submission.**
 
-* System requirement 3.3.1: On receiving a 201 from the submission endpoint, the UI shall replace the submit control with a download button linking to the file URL returned in the response. **Status: Not yet on production-main.**
+* System requirement 3.3.1: On receiving a 201 from the submission endpoint, the UI shall replace the submit control with a download button linking to the file URL returned in the response. **Status: Implemented on production-main.** The `PaymentForm` dialog calls an `onSuccess()` callback on 201. `DocumentItem` checks submission ownership on mount via `GET /api/submissions/[id]`; when ownership is confirmed, it renders the `DownloadButton` component in place of the "Select" button. The `DownloadButton` fetches a signed URL from `GET /api/download/[documentId]` and opens it in a new tab.
 
-* System requirement 3.3.2: The download button shall be operable via keyboard and labeled with the document title for assistive technology. **Status: Not yet on production-main.**
+* System requirement 3.3.2: The download button shall be operable via keyboard and labeled with the document title for assistive technology. **Status: Implemented on production-main** via Radix UI primitives in the `DownloadButton` component.
 
-* System requirement 3.3.3: ~~The Submission.downloadToken column shall exist in the schema from initial migration as nullable.~~ **Deviation:** The current `submissions` schema does not include a `downloadToken` column. The schema has: `id` (UUID), `document_id`, `user_id`, `amount`, `email`, `created_at`. If token-based downloads are implemented in a future sprint, a migration adding `downloadToken` will be required.
+* System requirement 3.3.3: ~~The Submission.downloadToken column shall exist in the schema from initial migration as nullable.~~ **Deviation (production-main):** The `submissions` schema does not include a `downloadToken` column. Current schema: `id` (UUID), `document_id`, `user_id`, `amount`, `created_at`. **Deviation (feature/transaction-flow):** Rather than adding a `downloadToken` column, this branch generates signed Supabase Storage URLs on-demand at `GET /api/download/[documentId]` using the service-role key (1-hour TTL). The `submissions` schema on this branch additionally carries `status` (STRING, default `"active"`), `stripe_session_id` (STRING, unique), and `stripe_payment_intent_id` (STRING, unique).
+
+### **3.3.4 Additional Routes Introduced on `feature/transaction-flow` (not yet on production-main)**
+
+The Stripe-backed payment flow on `feature/transaction-flow` introduces four additional routes and one new page not captured in earlier requirements:
+
+* **POST /api/stripe/checkout** — Requires authentication (401 if not). Accepts `{ document_id: number, amount: number }`. Validates amount ≥ $0.50 (Stripe minimum); returns 400 otherwise. Returns 404 if document does not exist. On success, creates a Stripe Checkout Session with `document_id` and `user_id` stored in metadata, and returns `{ url: string }` for client-side redirect.
+
+* **POST /api/stripe/webhook** — Verifies the Stripe webhook signature via `STRIPE_WEBHOOK_SECRET`; returns 400 on invalid signature. Handles two event types: (1) `checkout.session.completed` — extracts `document_id`, `user_id`, and `amount_total` from session metadata and creates a Submission row; idempotent via unique `stripe_session_id` constraint (duplicate delivery returns 200 without error). (2) `charge.refunded` — sets the matching submission's `status` to `"refunded"` via `stripe_payment_intent_id`; ignores events without a payment intent. All other event types return 200 with no database writes.
+
+* **GET /api/submissions/[id]** — Auth required (401 if not). The `id` parameter is the `document_id`. Returns `{ owned: true, submission: {...} }` if the authenticated user has an `active` submission for that document, or `{ owned: false }` otherwise. Used by `DocumentItem` on mount to determine whether to show the `DownloadButton` or the `PaymentForm`.
+
+* **GET /documents/success** (page route, not API) — Server component. Reads `session_id` from the query string, retrieves the Stripe Checkout Session, validates payment status, and renders document details with a `DownloadButton`. Returns inline error states for invalid session\_id, unpaid sessions, and missing documents.
 
 ## **3.4 System Feature 4 — Cross-Cutting Concerns**
 
@@ -281,11 +297,11 @@ Implementation status is noted where the current state on branch `production-mai
 
 ### **3.4.2 User Requirement: The codebase shall include automated tests covering the required cases.**
 
-* System requirement 4.2.1: The test suite shall cover all eight high-priority test cases from the assignment brief: valid submission, amount of zero, negative amount, missing documentId, invalid documentId, missing amount, valid submission persists, and valid submission returns download access. **Status: Not yet implemented.** Blocked pending the `POST /api/submissions` route being merged to production-main.
+* System requirement 4.2.1: The test suite shall cover all eight high-priority test cases from the assignment brief: valid submission, amount of zero, negative amount, missing documentId, invalid documentId, missing amount, valid submission persists, and valid submission returns download access. **Status: Implemented on `tests` branch** (`tests/api/submissions.post.test.ts`). All eight cases are present, plus additional cases covering auth enforcement and foreign-key violation handling.
 
-* System requirement 4.2.2: The test suite shall cover the three medium-priority test cases: GET /api/documents returns an array, GET /api/documents/\[id\] with a valid ID returns the document, and GET /api/documents/\[id\] with an invalid ID returns 404\. **Status: Not yet implemented.**
+* System requirement 4.2.2: The test suite shall cover the three medium-priority test cases: GET /api/documents returns an array, GET /api/documents/\[id\] with a valid ID returns the document, and GET /api/documents/\[id\] with an invalid ID returns 404\. **Status: Implemented on `tests` branch** (`tests/api/documents.test.ts`). Also covers the 400 case for non-numeric IDs and the 500 case for database failures.
 
-* System requirement 4.2.3: Tests shall run against the real Next.js route handlers via Supertest (or equivalent), with Prisma either mocked or pointed at a separate test database. **Status: Not yet implemented.**
+* System requirement 4.2.3: Tests shall run against the real Next.js route handlers via Supertest (or equivalent), with Prisma either mocked or pointed at a separate test database. **Status: Implemented with deviation on `tests` branch.** Vitest (not Supertest) is the test runner. Route handlers are imported directly and invoked with the Node.js `Request` API in a `node` Vitest environment — no live HTTP server required. Prisma is fully mocked via `vi.hoisted()`; Supabase auth and admin clients are also mocked. Production data is never written during a test run. Additional test files cover `GET /api/download/[documentId]` (`download.test.ts`), `POST /api/stripe/checkout` (`stripe.checkout.test.ts`), and `POST /api/stripe/webhook` (`stripe.webhook.test.ts`). A Playwright E2E suite (`e2e/`) covers the full authenticated user flow and login error states against a running dev server.
 
 ## **3.5 System Feature 5 — Authentication**
 
@@ -334,8 +350,8 @@ Consolidated view of the user-facing requirements above, with priorities, author
 | 1 | 3.1.1 The system shall display a landing page that explains the pay-what-you-want model and provides a CTA to browse documents. | A first-time visitor lands on the home page, reads a single hero section explaining the model, and clicks 'Browse Documents' to advance. | High | Done | M.G. / D.C. |
 | 2 | 3.1.2 The system shall display all available documents with title, description, category, and suggested price. | User navigates to /documents. The page fetches and renders all seeded documents as cards, each showing the metadata and a 'Select' action. | High | Done | M.G. / D.C. |
 | 3 | 3.2.1 The system shall allow the user to enter a payment amount greater than $0 for a selected document. | User clicks 'Select' on a document card. A payment dialog appears with a numeric input. User enters an amount and the submit button enables. | High | Partial — input does not pre-populate with suggested price | M.G. / D.C. |
-| 4 | 3.3.1 / 3.3.2 The system shall validate submissions server-side and persist them in the database. | On submit, the client POSTs to /api/submissions. The server validates amount \> 0 and document existence before writing a Submission row. | High | Not yet on production-main | M.G. / D.C. |
-| 5 | 3.3.3 The system shall reveal a download button only after a valid submission is accepted by the server. | After 201 Created, the UI replaces the submit button with a download button linking to the document file. | High | Not yet on production-main | M.G. / D.C. |
+| 4 | 3.3.1 / 3.3.2 The system shall validate submissions server-side and persist them in the database. | On submit, the client POSTs to /api/submissions. The server validates amount \> 0 and document existence before writing a Submission row. | High | Done (production-main, direct flow); Stripe-backed flow on feature/transaction-flow (pending merge) | M.G. / D.C. |
+| 5 | 3.3.3 The system shall reveal a download button only after a valid submission is accepted by the server. | After 201 Created, the PaymentForm calls onSuccess(); DocumentItem checks ownership on mount and renders DownloadButton for owned documents; DownloadButton fetches a signed URL from GET /api/download/[documentId]. | High | Done (production-main) | M.G. / D.C. |
 | 6 | 3.4.1 The system shall be usable on mobile viewports (≥ 360px). | User on a phone visits the site. The landing page, documents grid, and payment dialog all reflow without horizontal scroll or clipped controls. | Medium | Done | M.G. / D.C. |
 | 7 | 3.5.1–3.5.5 The system shall support user authentication via email/password and Google OAuth. | User registers or signs in. The header reflects their session. Middleware refreshes the session on every request. | Medium | Done | M.G. / D.C. |
 
@@ -363,11 +379,11 @@ Security requirements are stated for the PoC as built and as it would be hardene
 
 ### **PoC-level requirements (in scope)**
 
-* 4.3.1 The server shall validate every submission server-side regardless of any validation performed by the client. The eight required test cases include direct API calls bypassing the frontend, all of which shall be rejected appropriately. **Status: Planned (awaiting feature/transaction-flow merge).**
+* 4.3.1 The server shall validate every submission server-side regardless of any validation performed by the client. The eight required test cases include direct API calls bypassing the frontend, all of which shall be rejected appropriately. **Status: Implemented on production-main.** All input validation runs in the route handler before any database write.
 
-* 4.3.2 The server shall verify the existence of the referenced Document before recording a Submission. Foreign-key violations shall be impossible by validation, not only by the database constraint. **Status: Planned (awaiting feature/transaction-flow merge).**
+* 4.3.2 The server shall verify the existence of the referenced Document before recording a Submission. Foreign-key violations shall be impossible by validation, not only by the database constraint. **Status: Implemented on production-main.** A Prisma P2003 foreign-key violation is caught and surfaced as a 404 before the Submission row is returned.
 
-* 4.3.3 The server shall not return a download URL or token until after a valid Submission has been persisted. **Status: Planned (awaiting feature/transaction-flow merge).**
+* 4.3.3 The server shall not return a download URL or token until after a valid Submission has been persisted. **Status: Implemented on production-main.** The `download_url` field is included only in the 201 response after the Submission row is created. `GET /api/download/[documentId]` additionally verifies an active submission exists before generating a signed URL.
 
 * 4.3.4 Supabase Auth sessions shall be refreshed server-side on every request via the Next.js middleware. **Status: Implemented.** (`proxy.ts` + `lib/supabase/proxy.ts`)
 
@@ -421,13 +437,13 @@ Design direction: clean, restrained, single dominant CTA per page. OKLCH-based g
 
 *Authors: Matthew Garcia, Duane Cabahug*
 
-| Question | Answer | Date Answered |
-| :---- | :---- | :---- |
-| Does Leo expect a deployed instance, or is a local-only PoC acceptable? | Pending. Deployment is a stretch goal per the assignment; will revisit on Day 12 based on schedule. | — |
-| Should the documents page support sorting or filtering by category / suggested price? | Pending. Not required by the spec; will implement only if core work is complete. | — |
-| What format should the seeded sample PDFs take? | Resolved. Static placeholder PDFs (1–2 page lorem ipsum). The assignment explicitly states document content does not matter. | May 22, 2026 |
-| Should anonymous submissions be permitted, or is auth required to submit? | Pending. Current schema supports both (`user_id` is nullable). Enforcement policy not yet decided. | — |
-| Should confirm-password validation be added to the register page? | Pending. The form renders both fields but does not validate they match. | — |
+| Question                                                                              | Answer                                                                                                                                                                                                                                                  | Date Answered |
+| :------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :------------ |
+| Does Leo expect a deployed instance, or is a local-only PoC acceptable?               | Pending. Deployment is a stretch goal per the assignment; will revisit on Day 12 based on schedule.                                                                                                                                                     | —             |
+| Should the documents page support sorting or filtering by category / suggested price? | Pending. Not required by the spec; will implement only if core work is complete.                                                                                                                                                                        | —             |
+| What format should the seeded sample PDFs take?                                       | Resolved. Static placeholder PDFs (1–2 page lorem ipsum). The assignment explicitly states document content does not matter.                                                                                                                            | May 22, 2026  |
+| Should anonymous submissions be permitted, or is auth required to submit?             | Resolved. Submissions require authentication on all active branches. `POST /api/submissions` returns 401 for unauthenticated requests. The `user_id` column remains nullable at the schema level but the route enforces auth before any database write. | June 4, 2026  |
+| Should confirm-password validation be added to the register page?                     | Pending. The form renders both fields but does not validate they match before submitting.                                                                                                                                                               | —             |
 
 # **7\. Out of Scope**
 
@@ -437,7 +453,7 @@ The following are explicitly out of scope for this PoC, per the assignment brief
 
 ## **Out of scope per assignment**
 
-* Real payment processing (no Stripe integration).
+* Real payment processing (no Stripe integration). **Note:** Stripe checkout and webhook are implemented on `feature/transaction-flow` but not yet merged to `production-main`.
 
 * Admin dashboard.
 
@@ -451,24 +467,26 @@ The following are explicitly out of scope for this PoC, per the assignment brief
 
 * User accounts and authentication via Supabase (email/password and Google OAuth) — added during the `feature/auth` sprint and merged to `production-main` via PR \#4.
 
+* Submission validation, persistence, and download access — implemented on `production-main` (direct-submission flow). See Section 3.3.
+
+## **Implemented on `feature/transaction-flow` — pending merge to production-main**
+
+* Stripe payment integration — `POST /api/stripe/checkout` creates a Stripe Checkout Session; `POST /api/stripe/webhook` handles `checkout.session.completed` (creates submission) and `charge.refunded` (revokes access). The `submissions` table gains `status`, `stripe_session_id`, and `stripe_payment_intent_id` columns.
+
+* Signed Supabase Storage URLs for downloads — `GET /api/download/[documentId]` generates 1-hour signed URLs via the service-role key instead of returning static file paths.
+
+* Require authentication before submission — `POST /api/submissions` and `POST /api/stripe/checkout` both return 401 for unauthenticated requests.
+
 ## **Future work (post-PoC, designed for but not implemented)**
 
 * Vercel or AWS deployment: Lambda \+ API Gateway \+ RDS (Postgres) \+ S3 \+ CloudFront.
 
-* Stripe payment intent integration; Submission table extends with `stripePaymentIntentId` and `status`.
-
-* Signed S3 URLs for downloads, replacing the static `/public/files/` approach.
-
-* Single-use download token with expiry (schema migration required to add `downloadToken` column).
+* Single-use download token with expiry (schema migration required to add `downloadToken` column; not on any current branch).
 
 * Email and name capture before download (assignment stretch goal).
 
 * Confirm-password validation on the register page.
 
-* Require authentication before submission (currently `user_id` is nullable).
-
 * Search and category filter on documents page (assignment stretch goal).
-
-* Integration tests covering the full HTTP ↔ DB pipeline (assignment stretch goal).
 
 * Admin seed script (assignment stretch goal).
