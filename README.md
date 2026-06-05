@@ -1,6 +1,6 @@
 # Pay-What-You-Want Document Download Site
 
-A proof-of-concept full-stack web app. A visitor selects a document, enters any amount greater than $0, submits it, and receives a download button. No real payment processing — this is a PoC.
+A proof-of-concept full-stack web app. A visitor selects a document, enters any amount greater than $0.50, pays via Stripe Checkout, and receives a download button. The file is only unlocked after the webhook confirms payment server-side.
 
 ## Current Stack
 
@@ -9,8 +9,10 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 - **TypeScript 5.x** — strict mode
 - **Tailwind CSS v4** via `@tailwindcss/postcss`
 - **shadcn/ui** — radix-nova style, Radix UI primitives, `class-variance-authority`, `clsx`, `tailwind-merge`, `tw-animate-css`
+- **Framer Motion** (`motion/react`) — page animations
 - **Lucide React** — icon library
-- **Supabase** — auth (`@supabase/supabase-js`, `@supabase/ssr`)
+- **Supabase** — auth (`@supabase/supabase-js`, `@supabase/ssr`) and Storage (signed download URLs)
+- **Stripe** — Checkout Sessions, webhook event handling, refund revocation
 - **Prisma 7.8.0** — ORM with `@prisma/adapter-pg` for pgBouncer compatibility
 - **PostgreSQL** — via `pg` (node-postgres), transaction-mode pooler at runtime / session-mode pooler for CLI
 - **Geist + Geist Mono** — loaded via `next/font/google`
@@ -19,44 +21,52 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 ## What's Implemented
 
 ### Pages & Routing
-- **Landing page** (`app/page.tsx`) — hero section, primary CTA linking to `/documents`, three-step explanation section, responsive down to 360px
-- **Documents page** (`app/documents/page.tsx`) — fetches from `/api/documents`, renders document cards with inline payment flow and loading skeletons
+- **Landing page** (`app/page.tsx`) — hero, features, CTA
+- **Documents page** (`app/documents/page.tsx`) — document cards with inline payment flow, loading skeletons, live search (title/category/description), and an All / Owned tab filter
+- **Success page** (`app/documents/success/page.tsx`) — retrieves the Stripe session server-side, shows document title, amount paid, and download button
 - **Login page** (`app/auth/login/page.tsx`) — email/password form and Google OAuth button
 - **Register page** (`app/auth/register/page.tsx`) — email, password, and confirm-password fields
-- **Auth callback** (`app/auth/callback/route.ts`) — exchanges Supabase OAuth code for a session, redirects on success/error
+- **Auth callback** (`app/auth/callback/route.ts`) — exchanges Supabase OAuth code for a session
 
 ### API Routes
 - `GET /api/documents` — returns all documents ordered by creation date
 - `GET /api/documents/[id]` — returns a single document; 400 on invalid ID, 404 on missing
-- `POST /api/submissions` — records a purchase (requires auth); validates amount > 0
+- `POST /api/stripe/checkout` — creates a Stripe Checkout Session; requires auth; validates amount ≥ $0.50; embeds `document_id` and `user_id` in session metadata
+- `POST /api/stripe/webhook` — handles `checkout.session.completed` (creates submission) and `charge.refunded` (marks submission as refunded); validates Stripe signature
 - `GET /api/submissions/[id]` — checks if the current user owns a document (requires auth)
 - `GET /api/download/[documentId]` — verifies ownership then returns a 1-hour Supabase Storage signed URL (requires auth)
 
+### Payment Flow
+1. User clicks **Select** on a document card → `PaymentForm` dialog opens
+2. User enters an amount (≥ $0.50) and submits → `POST /api/stripe/checkout` creates a Session and returns its URL
+3. User is redirected to Stripe-hosted Checkout
+4. On success → redirected to `/documents/success?session_id=...`
+5. Stripe sends `checkout.session.completed` to `/api/stripe/webhook` → submission row created in DB with `stripe_session_id` and `stripe_payment_intent_id`
+6. Download button calls `GET /api/download/[documentId]` → server checks submission exists and is `active`, then returns a signed URL
+7. If a charge is refunded, `charge.refunded` webhook fires → submission status set to `refunded`, revoking download access
+
 ### Components
-- **Layout** — `components/site-header.tsx` (nav links + user auth dropdown), `components/site-footer.tsx`, `components/wordmark.tsx`
-- **Documents** — `components/documents/DocumentItem.tsx` (card with title, description, category, suggested price), `components/documents/DocumentItemSkeleton.tsx`, `components/documents/PaymentForm.tsx` (dialog with amount input)
-- **UI primitives** — `avatar`, `button`, `card`, `dialog`, `dropdown-menu`, `field`, `input`, `input-group`, `label`, `separator`, `skeleton`, `textarea`
+- **Layout** — `components/site-header.tsx` (nav, scroll-based border, user dropdown), `components/site-footer.tsx`, `components/wordmark.tsx`
+- **Landing page** — `components/landing-page/` (split into `hero-section`, `features-section`, `cta-section`, `primitives`)
+- **Documents** — `components/documents/DocumentItem.tsx`, `DocumentItemSkeleton.tsx`, `PaymentForm.tsx`, `DownloadButton.tsx`
+- **UI primitives** — `avatar`, `button`, `card`, `dialog`, `dropdown-menu`, `field`, `input`, `input-group`, `label`, `separator`, `skeleton`, `tabs`, `textarea`
 
 ### Library & Data Layer
-- **Prisma client** (`lib/prisma.ts`) — singleton with `PrismaPg` adapter; uses `DATABASE_URL` (transaction-mode pooler) at runtime
-- **Document queries** (`lib/documents.ts`) — `getAllDocuments()`, `getDocumentById(id)`; serializes `Decimal` and `Date` types for JSON transport
+- **Prisma client** (`lib/prisma.ts`) — singleton with `PrismaPg` adapter; uses `DATABASE_URL` at runtime
+- **Document queries** (`lib/documents.ts`) — `getAllDocuments()`, `getDocumentById(id)`
 - **Auth helpers** (`lib/auth.ts`) — `signInWithEmail`, `signUpWithEmail`, `signOut`, `continueWithGoogle`
-- **Submission queries** (`lib/submissions.ts`) — `createSubmission()`, `checkSubmission()`
+- **Submission queries** (`lib/submissions.ts`) — `createSubmission()`, `checkSubmission()`, `revokeSubmission()`
 - **Supabase clients** — `lib/supabase/client.ts` (browser), `lib/supabase/server.ts` (server/cookie-based), `lib/supabase/admin.ts` (service-role for Storage)
-- **Types** (`lib/types.ts`) — `Document`, `Submission`
-- **Utilities** (`lib/utils.ts`) — `cn()` helper
 
 ### Database
-- **Schema** (`prisma/schema.prisma`) — `documents` and `submissions` models; `submissions.user_id` is a plain `@db.Uuid` field — the FK to `auth.users` is enforced at the DB level by Supabase, not as a Prisma relation
-- **Config** (`prisma.config.ts`) — dual-URL setup: `DIRECT_URL` (session-mode, port 5432) for CLI operations; `DATABASE_URL` (transaction-mode pooler) injected at runtime via `PrismaClient` constructor
-- **Generated client** — output to `lib/generated/prisma/`
+- **Schema** (`prisma/schema.prisma`) — `documents` and `submissions` models; `submissions` stores `stripe_session_id`, `stripe_payment_intent_id`, and `status` (`active` | `refunded`)
+- **Config** (`prisma.config.ts`) — dual-URL: `DIRECT_URL` (session-mode, port 5432) for CLI; `DATABASE_URL` (transaction-mode pooler) at runtime
 
-> **Prisma + Supabase schema rule:** `prisma db pull` will always fail on this project because `submissions_user_id_fkey` crosses from the `public` schema into Supabase's `auth` schema. Adding `auth` to the datasource `schemas` list triggers multi-schema mode, which then requires `@@schema(...)` on every model. **Do not use `db pull`.** Make schema changes in two steps instead: (1) edit `prisma/schema.prisma` manually, (2) apply the SQL change in Supabase (dashboard or `prisma migrate dev` for `public`-only changes), then run `npx prisma generate`.
+> **Prisma + Supabase schema rule:** `prisma db pull` will always fail because `submissions_user_id_fkey` crosses from `public` into Supabase's `auth` schema. **Do not use `db pull`.** Make schema changes by editing `prisma/schema.prisma` manually, applying the SQL in Supabase, then running `npx prisma generate`.
 
-## What's Planned (Not Yet Built)
+## What's Planned
 
-- Real payment processing (Stripe, etc.)
-- Backend validation and tests
+- Backend validation tests
 - Route protection middleware
 
 ## Getting Started
@@ -69,24 +79,30 @@ pnpm install
 
 ### 2. Create `.env.local`
 
-Create a `.env.local` file in the project root with the following variables. Get these values from your [Supabase project dashboard](https://supabase.com/dashboard) under **Project Settings → API** and **Project Settings → Database**.
-
 ```env
-# Database — get from Supabase: Project Settings → Database → Connection string
-# Use "Transaction" mode URL (port 6543) for DATABASE_URL
-# Use "Session" mode URL (port 5432) for DIRECT_URL
-DATABASE_URL="postgresql://postgres.[project-ref]:[password]@aws-1-us-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
-DIRECT_URL="postgresql://postgres.[project-ref]:[password]@aws-1-us-west-1.pooler.supabase.com:5432/postgres"
+# ── Database ────────────────────────────────────────────────────────────────
+# Supabase → Project Settings → Database → Connection string
+# Transaction mode (port 6543) for runtime:
+DATABASE_URL="postgresql://postgres.[ref]:[password]@aws-1-us-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+# Session mode (port 5432) for Prisma CLI:
+DIRECT_URL="postgresql://postgres.[ref]:[password]@aws-1-us-west-1.pooler.supabase.com:5432/postgres"
 
-# Supabase — get from Project Settings → API
-NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
+# ── Supabase ─────────────────────────────────────────────────────────────────
+# Supabase → Project Settings → API
+NEXT_PUBLIC_SUPABASE_URL=https://[ref].supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
-
-# Service role key — get from Project Settings → API → "service_role" (keep secret)
+# Service role key — never expose to the client:
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
+
+# ── Stripe ───────────────────────────────────────────────────────────────────
+# Stripe Dashboard → Developers → API keys
+STRIPE_SECRET_KEY=sk_test_...
+# Stripe Dashboard → Developers → Webhooks → signing secret
+# (use the Stripe CLI secret when running locally — see step 4)
+STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
-> **Never commit `.env.local`** — it contains secrets. It is already in `.gitignore`.
+> **Never commit `.env.local`** — it is already in `.gitignore`.
 
 ### 3. Generate Prisma client
 
@@ -94,15 +110,79 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
 npx prisma generate
 ```
 
-Run this after install and any time `prisma/schema.prisma` changes.
+Run this after install and whenever `prisma/schema.prisma` changes.
 
-### 4. Start the dev server
+### 4. Set up Stripe webhooks (local dev)
+
+Stripe delivers webhook events to a public URL. In development, use the Stripe CLI to forward them to your local server.
+
+**Install the Stripe CLI** (if not already):
+
+macOS:
+```bash
+brew install stripe/stripe-cli/stripe
+```
+
+Windows:
+```powershell
+npm install -g @stripe/cli
+```
+
+**Log in:**
+```bash
+stripe login
+```
+
+**Start forwarding:**
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+The CLI prints a webhook signing secret that starts with `whsec_`. Copy it into `.env.local` as `STRIPE_WEBHOOK_SECRET`. **This secret is different from the one in the Stripe Dashboard** — use the CLI one for local dev and the Dashboard one for production.
+
+Keep this terminal open while developing; it must be running for the webhook to fire after a test payment.
+
+### 5. Start the dev server
 
 ```bash
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+**Test card numbers** (no real money):
+
+| Number | Scenario |
+|---|---|
+| `4242 4242 4242 4242` | Payment succeeds |
+| `4000 0000 0000 9995` | Card declined |
+
+Use any future expiry, any 3-digit CVC, and any postcode.
+
+### 6. Set up Stripe webhooks (deployed / staging)
+
+The Stripe CLI is only needed for local development — Stripe's servers cannot reach `localhost`, so the Dashboard won't accept it as an endpoint. For any deployed URL (including Vercel preview deployments), register the endpoint directly in the Dashboard instead:
+
+1. Go to **Stripe Dashboard → Developers → Webhooks → Add endpoint**
+2. Set the URL to your deployed webhook route:
+   ```
+   https://your-deployed-url.com/api/stripe/webhook
+   ```
+3. Select events: `checkout.session.completed`, `charge.refunded`
+4. Copy the signing secret (`whsec_...`) and set it as `STRIPE_WEBHOOK_SECRET` in your deployment's environment variables (e.g. Vercel → Project Settings → Environment Variables)
+
+> **Test mode works here too.** You can register a staging/preview URL under test mode API keys — test card numbers still work and no real money is charged. This lets you skip running the CLI entirely for non-local testing.
+
+> **Two separate secrets:** the CLI prints its own `whsec_` for local dev; the Dashboard generates a different one for each registered endpoint. Use the CLI secret in `.env.local` and the Dashboard secret in your deployed env vars.
+
+**Alternative for local dev without the CLI:** tools like [ngrok](https://ngrok.com) or [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) create a public URL that tunnels to localhost — register that URL in the Dashboard and webhooks fire without the CLI running.
+
+### 7. Set up Stripe webhooks (production)
+
+1. Go to **Stripe Dashboard → Developers → Webhooks → Add endpoint**
+2. Set the URL to `https://your-domain.com/api/stripe/webhook`
+3. Select events: `checkout.session.completed`, `charge.refunded`
+4. Copy the signing secret and set it as `STRIPE_WEBHOOK_SECRET` in your production environment
 
 ### Environment variables reference
 
@@ -112,7 +192,9 @@ Open [http://localhost:3000](http://localhost:3000).
 | `DIRECT_URL` | CLI (`prisma.config.ts`) | Supabase → Database → Connection string → Session mode (port 5432) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase clients | Supabase → Project Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase clients | Supabase → Project Settings → API → Publishable key |
-| `SUPABASE_SERVICE_ROLE_KEY` | `lib/supabase/admin.ts` | Supabase → Project Settings → API → `service_role` key — **never expose to the client** |
+| `SUPABASE_SERVICE_ROLE_KEY` | `lib/supabase/admin.ts` | Supabase → Project Settings → API → `service_role` key |
+| `STRIPE_SECRET_KEY` | `app/api/stripe/` | Stripe Dashboard → Developers → API keys → Secret key |
+| `STRIPE_WEBHOOK_SECRET` | `app/api/stripe/webhook/route.ts` | Stripe CLI (`stripe listen`) for local; Stripe Dashboard → Webhooks for production |
 
 ## Commands
 
@@ -125,57 +207,64 @@ pnpm format           # Prettier — auto-fix
 pnpm format:check     # Prettier — check only
 npx prisma generate   # Re-generate Prisma client after schema changes
 npx prisma migrate dev --name <name>  # Create + apply a migration (uses DIRECT_URL)
-# NOTE: npx prisma db pull is NOT supported — see "Prisma + Supabase schema rule" above
+stripe listen --forward-to localhost:3000/api/stripe/webhook  # Forward webhooks locally
+# NOTE: npx prisma db pull is NOT supported — see schema rule above
 ```
 
 ## Project Structure
 
 ```
 app/
-  layout.tsx              # Root layout — font loading, metadata, header/footer
-  page.tsx                # Landing page — hero, steps
-  globals.css             # Tailwind import + CSS variable definitions
+  layout.tsx                    # Root layout — fonts, metadata, header/footer
+  page.tsx                      # Landing page — composes landing-page sections
+  globals.css                   # Tailwind import + CSS variable definitions
   documents/
-    page.tsx              # Documents page — listing and payment flow
+    page.tsx                    # Documents listing with payment flow
+    success/page.tsx            # Post-payment success page with download button
   auth/
-    login/page.tsx        # Login — email/password + Google OAuth
-    register/page.tsx     # Registration — email, password, confirm
-    callback/route.ts     # Supabase OAuth callback handler
+    login/page.tsx              # Login — email/password + Google OAuth
+    register/page.tsx           # Registration
+    callback/route.ts           # Supabase OAuth callback handler
   api/
+    stripe/
+      checkout/route.ts         # POST — create Stripe Checkout Session
+      webhook/route.ts          # POST — handle checkout.session.completed, charge.refunded
     documents/
-      route.ts            # GET /api/documents
-      [id]/route.ts       # GET /api/documents/[id]
+      route.ts                  # GET /api/documents
+      [id]/route.ts             # GET /api/documents/[id]
     submissions/
-      route.ts            # POST /api/submissions
-      [id]/route.ts       # GET /api/submissions/[id]
+      [id]/route.ts             # GET /api/submissions/[id]
     download/
-      [documentId]/route.ts  # GET /api/download/[documentId]
+      [documentId]/route.ts     # GET — verify ownership, return signed URL
 components/
-  wordmark.tsx            # Green dot + "Openleaf" brand mark
-  site-header.tsx         # Header with nav links and user dropdown
-  site-footer.tsx         # Footer with copyright line
+  wordmark.tsx                  # Brand mark
+  site-header.tsx               # Nav, scroll-based border, auth dropdown
+  site-footer.tsx               # Footer
+  landing-page/
+    primitives.tsx              # ease, Reveal, Eyebrow, SectionTag
+    hero-section.tsx            # Hero copy + floating card visual
+    features-section.tsx        # Feature cards grid
+    cta-section.tsx             # Final CTA
   documents/
-    DocumentItem.tsx      # Document card + payment dialog trigger
-    DocumentItemSkeleton.tsx  # Loading skeleton
-    PaymentForm.tsx       # Pay-what-you-want dialog
-  ui/                     # shadcn/ui primitives
-    avatar.tsx | button.tsx | card.tsx | dialog.tsx | dropdown-menu.tsx
-    field.tsx | input.tsx | input-group.tsx | label.tsx | separator.tsx
-    skeleton.tsx | textarea.tsx
+    DocumentItem.tsx            # Document card + payment dialog trigger
+    DocumentItemSkeleton.tsx    # Loading skeleton
+    PaymentForm.tsx             # Pay-what-you-want dialog → Stripe redirect
+    DownloadButton.tsx          # Calls /api/download/[id], triggers file download
+  ui/                           # shadcn/ui primitives
 lib/
-  prisma.ts               # PrismaClient singleton with PG adapter
-  documents.ts            # getAllDocuments, getDocumentById
-  submissions.ts          # createSubmission, checkSubmission
-  auth.ts                 # Supabase auth helpers
-  types.ts                # Document, Submission types
-  utils.ts                # cn() helper
-  generated/prisma/       # Auto-generated Prisma client (do not edit; run npx prisma generate)
+  prisma.ts                     # PrismaClient singleton with PG adapter
+  documents.ts                  # getAllDocuments, getDocumentById
+  submissions.ts                # createSubmission, checkSubmission, revokeSubmission
+  auth.ts                       # Supabase auth helpers
+  types.ts                      # Document, Submission types
+  utils.ts                      # cn() helper
+  generated/prisma/             # Auto-generated Prisma client (do not edit)
   supabase/
-    client.ts             # Supabase browser client
-    server.ts             # Supabase server client (cookies)
-    admin.ts              # Service-role client for Storage signed URLs
+    client.ts                   # Browser client
+    server.ts                   # Server client (cookies)
+    admin.ts                    # Service-role client for Storage signed URLs
 prisma/
-  schema.prisma           # DB schema — documents, submissions (user_id as plain UUID, FK owned by Supabase)
-prisma.config.ts          # Prisma CLI config — dual-URL, migrations path
-proxy.ts                  # Next.js middleware — Supabase session refresh
+  schema.prisma                 # documents + submissions (stripe_session_id, stripe_payment_intent_id, status)
+prisma.config.ts                # Dual-URL Prisma CLI config
+proxy.ts                        # Next.js middleware — Supabase session refresh
 ```

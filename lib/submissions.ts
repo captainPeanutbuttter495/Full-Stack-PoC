@@ -4,6 +4,8 @@ export const createSubmission = async (
   document_id: number,
   amount: number,
   user_id: string | null,
+  stripe_session_id?: string,
+  stripe_payment_intent_id?: string,
 ) => {
   try {
     const submission = await prisma.submissions.create({
@@ -11,6 +13,8 @@ export const createSubmission = async (
         document_id,
         amount,
         user_id,
+        ...(stripe_session_id ? { stripe_session_id } : {}),
+        ...(stripe_payment_intent_id ? { stripe_payment_intent_id } : {}),
       },
     });
 
@@ -38,7 +42,7 @@ export const createSubmission = async (
 export const checkSubmission = async (document_id: number, user_id: string) => {
   try {
     const submission = await prisma.submissions.findFirst({
-      where: { document_id, user_id },
+      where: { document_id, user_id, status: "active" },
     });
 
     if (!submission) {
@@ -51,6 +55,17 @@ export const checkSubmission = async (document_id: number, user_id: string) => {
         ? submission.created_at.toISOString()
         : null,
     };
+  } catch (error) {
+    return error instanceof Error ? error : new Error(String(error));
+  }
+}
+
+export const revokeSubmission = async (payment_intent_id: string) => {
+  try {
+    await prisma.submissions.updateMany({
+      where: { stripe_payment_intent_id: payment_intent_id },
+      data: { status: "refunded" },
+    });
   } catch (error) {
     return error instanceof Error ? error : new Error(String(error));
   }
