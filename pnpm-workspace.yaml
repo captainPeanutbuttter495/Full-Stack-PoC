@@ -1,6 +1,16 @@
+packages:
+  - "."
+
+# Build-script approval for dependencies (pnpm 11 `allowBuilds` map; replaces the
+# v10 onlyBuiltDependencies/ignoredBuiltDependencies settings, which v11 removed).
+# true  = allow the package's install/postinstall build script to run
+# false = explicitly skip it (reviewed, so strictDepBuilds won't fail the install)
+# Every package with a build script must be listed; under pnpm 11 strictDepBuilds
+# defaults to true, so any unreviewed build script fails `pnpm install`.
 allowBuilds:
-  '@prisma/engines': true
-  msw: true
+  "@prisma/engines": true
   prisma: true
-  sharp: set this to true or false
-  unrs-resolver: set this to true or false
+  sharp: true
+  unrs-resolver: true
+  # msw is a test-only dependency, not needed for the Docker app build or runtime.
+  msw: false
