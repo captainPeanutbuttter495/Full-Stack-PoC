@@ -4,8 +4,21 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import DownloadButton from "@/components/documents/DownloadButton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import {ArrowLeft} from "lucide-react";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+function ErrorState({ title, description }: { title: string; description: string }) {
+  return (
+    <main className="flex flex-col items-center justify-center min-h-screen gap-6 text-center px-4">
+      <h1 className="text-2xl font-bold">{title}</h1>
+      <p className="text-muted-foreground">{description}</p>
+      <Button asChild variant="default">
+        <Link href="/documents"><ArrowLeft /> Back to documents</Link>
+      </Button>
+    </main>
+  );
+}
 
 export default async function SuccessPage({
   searchParams,
@@ -14,22 +27,57 @@ export default async function SuccessPage({
 }) {
   const { session_id } = await searchParams;
 
-  let doc = null;
-  let amountPaid: number | null = null;
-  if (session_id) {
-    try {
-      const session = await stripe.checkout.sessions.retrieve(session_id);
-      const document_id = parseInt(session.metadata?.document_id ?? "");
-      amountPaid = session.amount_total != null ? session.amount_total / 100 : null;
-      if (!isNaN(document_id)) {
-        const result = await getDocumentById(document_id);
-        if (result && !(result instanceof Error)) {
-          doc = result;
-        }
-      }
-    } catch {
-      // session lookup failed — fall through to generic success message
-    }
+  if (!session_id) {
+    return (
+      <ErrorState
+        title="Invalid link"
+        description="No session ID was provided. If you completed a payment, check your email for a confirmation."
+      />
+    );
+  }
+
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.retrieve(session_id);
+  } catch {
+    return (
+      <ErrorState
+        title="Session not found"
+        description="This payment session doesn't exist or has expired. If you were charged, please contact support."
+      />
+    );
+  }
+
+  if (session.payment_status !== "paid") {
+    return (
+      <ErrorState
+        title="Payment incomplete"
+        description="Your payment was not completed. No charge was made — please try again."
+      />
+    );
+  }
+
+  const amountPaid = session.amount_total != null ? session.amount_total / 100 : null;
+  const document_id = parseInt(session.metadata?.document_id ?? "");
+
+  if (isNaN(document_id)) {
+    return (
+      <ErrorState
+        title="Something went wrong"
+        description="Your payment was received but we couldn't identify the document. Please contact support with your session ID."
+      />
+    );
+  }
+
+  const doc = await getDocumentById(document_id);
+
+  if (!doc || doc instanceof Error) {
+    return (
+      <ErrorState
+        title="Document not found"
+        description="Your payment was received but the document could not be loaded. Please contact support."
+      />
+    );
   }
 
   return (
@@ -38,29 +86,27 @@ export default async function SuccessPage({
       <p className="text-muted-foreground">
         Your document is now unlocked and ready to download.
       </p>
-      {doc && (
-        <div className="w-full max-w-md">
-          <Card className="w-full text-left">
-            <CardHeader className="font-mono text-muted-foreground">
-              <div className="flex justify-between items-center">
-                <p>{doc.category?.toUpperCase()}</p>
-                <p>
-                  {amountPaid != null
-                    ? <>you paid <strong>${amountPaid.toFixed(2)}</strong></>
-                    : <>suggested <strong>${doc.suggested_price}</strong></>}
-                </p>
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <h3 className="text-lg font-semibold">{doc.title}</h3>
-              <p>{doc.description}</p>
-              <DownloadButton documentId={doc.id} />
-            </CardContent>
-          </Card>
-        </div>
-      )}
-      <Button asChild variant="ghost">
-        <Link href="/documents">Back to documents</Link>
+      <div className="w-full max-w-md">
+        <Card className="w-full text-left">
+          <CardHeader className="font-mono text-muted-foreground">
+            <div className="flex justify-between items-center">
+              <p>{doc.category?.toUpperCase()}</p>
+              <p>
+                {amountPaid != null
+                  ? <>you paid <strong>${amountPaid.toFixed(2)}</strong></>
+                  : <>suggested <strong>${doc.suggested_price}</strong></>}
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <h3 className="text-lg font-semibold">{doc.title}</h3>
+            <p>{doc.description}</p>
+            <DownloadButton documentId={doc.id} />
+          </CardContent>
+        </Card>
+      </div>
+      <Button asChild variant="default">
+        <Link href="/documents"><ArrowLeft /> Back to documents</Link>
       </Button>
     </main>
   );
