@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {ArrowLeft} from "lucide-react";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Construct the Stripe client lazily (on first render) rather than at module
+// load. `next build` collects page config by importing this module, and the
+// secret is intentionally absent at build time — eager construction would throw.
+let stripeClient: Stripe | undefined;
+function getStripe(): Stripe {
+  return (stripeClient ??= new Stripe(process.env.STRIPE_SECRET_KEY!));
+}
 
 function ErrorState({ title, description }: { title: string; description: string }) {
   return (
@@ -38,7 +44,7 @@ export default async function SuccessPage({
 
   let session: Stripe.Checkout.Session;
   try {
-    session = await stripe.checkout.sessions.retrieve(session_id);
+    session = await getStripe().checkout.sessions.retrieve(session_id);
   } catch {
     return (
       <ErrorState
