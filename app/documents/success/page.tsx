@@ -5,7 +5,13 @@ import DownloadButton from "@/components/documents/DownloadButton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Construct the Stripe client lazily (on first render) rather than at module
+// load. `next build` collects page config by importing this module, and the
+// secret is intentionally absent at build time — eager construction would throw.
+let stripeClient: Stripe | undefined;
+function getStripe(): Stripe {
+  return (stripeClient ??= new Stripe(process.env.STRIPE_SECRET_KEY!));
+}
 
 export default async function SuccessPage({
   searchParams,
@@ -18,7 +24,7 @@ export default async function SuccessPage({
   let amountPaid: number | null = null;
   if (session_id) {
     try {
-      const session = await stripe.checkout.sessions.retrieve(session_id);
+      const session = await getStripe().checkout.sessions.retrieve(session_id);
       const document_id = parseInt(session.metadata?.document_id ?? "");
       amountPaid = session.amount_total != null ? session.amount_total / 100 : null;
       if (!isNaN(document_id)) {

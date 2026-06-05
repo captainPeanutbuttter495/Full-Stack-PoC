@@ -2,7 +2,13 @@ import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { createSubmission, revokeSubmission } from "@/lib/submissions";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Construct the Stripe client lazily (on first request) rather than at module
+// load. `next build` collects route data by importing this module, and the
+// secret is intentionally absent at build time — eager construction would throw.
+let stripeClient: Stripe | undefined;
+function getStripe(): Stripe {
+  return (stripeClient ??= new Stripe(process.env.STRIPE_SECRET_KEY!));
+}
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -10,7 +16,7 @@ export async function POST(request: Request) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!,
