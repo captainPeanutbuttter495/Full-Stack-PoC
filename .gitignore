@@ -54,3 +54,6 @@ next-env.d.ts
 .windsurf
 playwright-report/
 test-results/
+
+# Playwright auth state — contains live session tokens, never commit
+.auth/
