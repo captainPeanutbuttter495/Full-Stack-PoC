@@ -22,7 +22,7 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 
 ### Pages & Routing
 - **Landing page** (`app/page.tsx`) — hero, features, CTA
-- **Documents page** (`app/documents/page.tsx`) — document cards with inline payment flow and loading skeletons
+- **Documents page** (`app/documents/page.tsx`) — document cards with inline payment flow, loading skeletons, live search (title/category/description), and an All / Owned tab filter
 - **Success page** (`app/documents/success/page.tsx`) — retrieves the Stripe session server-side, shows document title, amount paid, and download button
 - **Login page** (`app/auth/login/page.tsx`) — email/password form and Google OAuth button
 - **Register page** (`app/auth/register/page.tsx`) — email, password, and confirm-password fields
@@ -49,7 +49,7 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 - **Layout** — `components/site-header.tsx` (nav, scroll-based border, user dropdown), `components/site-footer.tsx`, `components/wordmark.tsx`
 - **Landing page** — `components/landing-page/` (split into `hero-section`, `features-section`, `cta-section`, `primitives`)
 - **Documents** — `components/documents/DocumentItem.tsx`, `DocumentItemSkeleton.tsx`, `PaymentForm.tsx`, `DownloadButton.tsx`
-- **UI primitives** — `avatar`, `button`, `card`, `dialog`, `dropdown-menu`, `field`, `input`, `input-group`, `label`, `separator`, `skeleton`, `textarea`
+- **UI primitives** — `avatar`, `button`, `card`, `dialog`, `dropdown-menu`, `field`, `input`, `input-group`, `label`, `separator`, `skeleton`, `tabs`, `textarea`
 
 ### Library & Data Layer
 - **Prisma client** (`lib/prisma.ts`) — singleton with `PrismaPg` adapter; uses `DATABASE_URL` at runtime
