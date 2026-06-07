@@ -3,7 +3,13 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getDocumentById } from "@/lib/documents";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Construct the Stripe client lazily (on first request) rather than at module
+// load. `next build` collects route data by importing this module, and the
+// secret is intentionally absent at build time — eager construction would throw.
+let stripeClient: Stripe | undefined;
+function getStripe(): Stripe {
+  return (stripeClient ??= new Stripe(process.env.STRIPE_SECRET_KEY!));
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -29,7 +35,7 @@ export async function POST(request: Request) {
 
   const origin = request.headers.get("origin") ?? "http://localhost:3000";
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     payment_method_types: ["card"],
     line_items: [
       {

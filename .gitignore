@@ -46,10 +46,14 @@ next-env.d.ts
 
 .claude
 .agents
-.windsurf
 
 /lib/generated/prisma
 
 .obsidian
 
 .windsurf
+playwright-report/
+test-results/
+
+# Playwright auth state — contains live session tokens, never commit
+.auth/

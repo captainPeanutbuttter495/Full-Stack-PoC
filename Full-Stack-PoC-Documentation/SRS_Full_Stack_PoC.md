@@ -125,7 +125,7 @@ Within each class, two behavioral subtypes inform UI decisions:
 
 * **Client:** Any modern evergreen browser (Chrome, Firefox, Safari, Edge). Mobile Safari and Chrome on Android.
 
-* **Development host:** Any OS with Node.js and pnpm installed. No Docker dependency — the database is Supabase-hosted, not local.
+* **Development host:** Any OS with Node.js and pnpm installed. The app can optionally run in a container via the root `Dockerfile` (see `Deployment/Docker.md`). The database remains Supabase-hosted, so there is no local database container and no `docker-compose` to orchestrate. ⚠️ PoC limitation: the container is for consistent local runs only — production deployment, CI/CD, and Kubernetes are future work, not in scope.
 
 * **Production deployment target (future work, not in scope):** Vercel or AWS Lambda for the Next.js server; Supabase remains the database and auth provider.
 
