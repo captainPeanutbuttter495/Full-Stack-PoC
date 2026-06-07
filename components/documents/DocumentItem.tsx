@@ -9,7 +9,7 @@ import { User } from "@supabase/supabase-js";
 
 type DocumentItemProps = {
   doc: Document;
-  user: User | null;  
+  user: User | null;
 };
 
 function DocumentItem({ doc, user }: DocumentItemProps) {
@@ -32,7 +32,7 @@ function DocumentItem({ doc, user }: DocumentItemProps) {
     const fetchSubmissionStatus = async () => {
       if (!user) {
         setLoading(false);
-        return
+        return;
       }
 
       try {
@@ -40,7 +40,10 @@ function DocumentItem({ doc, user }: DocumentItemProps) {
 
         if (!response.ok) {
           const body = await response.json().catch(() => ({}));
-          console.error("Error fetching submission status:", body?.error ?? response.statusText);
+          console.error(
+            "Error fetching submission status:",
+            body?.error ?? response.statusText,
+          );
           return;
         }
 
@@ -65,9 +68,15 @@ function DocumentItem({ doc, user }: DocumentItemProps) {
         <div className="flex justify-between items-center">
           <p>{doc.category?.toUpperCase()}</p>
           <p>
-            {owned && amountPaid != null
-              ? <>you paid <strong>${amountPaid.toFixed(2)}</strong></>
-              : <>suggested <strong>${doc.suggested_price}</strong></>}
+            {owned && amountPaid != null ? (
+              <>
+                you paid <strong>${amountPaid.toFixed(2)}</strong>
+              </>
+            ) : (
+              <>
+                suggested <strong>${doc.suggested_price}</strong>
+              </>
+            )}
           </p>
         </div>
       </CardHeader>
@@ -80,12 +89,17 @@ function DocumentItem({ doc, user }: DocumentItemProps) {
           </Button>
         ) : owned ? (
           <Button size="lg" onClick={handleDownload} disabled={downloading}>
-            {downloading ? <Loader2 className="animate-spin" /> : <>Download File <Download /></>}
+            {downloading ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <>
+                Download File <Download />
+              </>
+            )}
           </Button>
         ) : (
           <PaymentForm doc={doc} onSuccess={() => setOwned(true)} />
         )}
-      
       </CardContent>
     </Card>
   );

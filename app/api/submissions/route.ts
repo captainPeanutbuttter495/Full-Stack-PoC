@@ -19,7 +19,9 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const user_id = user?.id ?? null;
 
     if (!user_id) {
@@ -30,13 +32,19 @@ export async function POST(request: Request) {
 
     if (submission instanceof Error) {
       if (submission.message === "Document not found") {
-        return NextResponse.json({ error: submission.message }, { status: 404 });
+        return NextResponse.json(
+          { error: submission.message },
+          { status: 404 },
+        );
       }
       throw submission;
     }
 
     return NextResponse.json(
-      { ...submission, download_url: `/api/download/${submission.document_id}` },
+      {
+        ...submission,
+        download_url: `/api/download/${submission.document_id}`,
+      },
       { status: 201 },
     );
   } catch (error) {

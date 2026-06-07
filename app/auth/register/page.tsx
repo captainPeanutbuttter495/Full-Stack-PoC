@@ -125,7 +125,12 @@ function RegisterPage() {
           </form>
         </CardContent>
         <CardFooter className="flex flex-col items-center gap-4">
-          <Button variant="outline" className="w-full bg-card" disabled={loading} onClick={() => continueWithGoogle()}>
+          <Button
+            variant="outline"
+            className="w-full bg-card"
+            disabled={loading}
+            onClick={() => continueWithGoogle()}
+          >
             Sign up with Google
           </Button>
           <p>

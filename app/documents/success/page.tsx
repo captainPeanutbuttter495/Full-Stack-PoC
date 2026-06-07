@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import DownloadButton from "@/components/documents/DownloadButton";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import {ArrowLeft} from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 // Construct the Stripe client lazily (on first render) rather than at module
 // load. `next build` collects page config by importing this module, and the
@@ -14,13 +14,21 @@ function getStripe(): Stripe {
   return (stripeClient ??= new Stripe(process.env.STRIPE_SECRET_KEY!));
 }
 
-function ErrorState({ title, description }: { title: string; description: string }) {
+function ErrorState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
     <main className="flex flex-col items-center justify-center min-h-screen gap-6 text-center px-4">
       <h1 className="text-2xl font-bold">{title}</h1>
       <p className="text-muted-foreground">{description}</p>
       <Button asChild variant="default">
-        <Link href="/documents"><ArrowLeft /> Back to documents</Link>
+        <Link href="/documents">
+          <ArrowLeft /> Back to documents
+        </Link>
       </Button>
     </main>
   );
@@ -63,7 +71,8 @@ export default async function SuccessPage({
     );
   }
 
-  const amountPaid = session.amount_total != null ? session.amount_total / 100 : null;
+  const amountPaid =
+    session.amount_total != null ? session.amount_total / 100 : null;
   const document_id = parseInt(session.metadata?.document_id ?? "");
 
   if (isNaN(document_id)) {
@@ -98,9 +107,15 @@ export default async function SuccessPage({
             <div className="flex justify-between items-center">
               <p>{doc.category?.toUpperCase()}</p>
               <p>
-                {amountPaid != null
-                  ? <>you paid <strong>${amountPaid.toFixed(2)}</strong></>
-                  : <>suggested <strong>${doc.suggested_price}</strong></>}
+                {amountPaid != null ? (
+                  <>
+                    you paid <strong>${amountPaid.toFixed(2)}</strong>
+                  </>
+                ) : (
+                  <>
+                    suggested <strong>${doc.suggested_price}</strong>
+                  </>
+                )}
               </p>
             </div>
           </CardHeader>
@@ -112,7 +127,9 @@ export default async function SuccessPage({
         </Card>
       </div>
       <Button asChild variant="default">
-        <Link href="/documents"><ArrowLeft /> Back to documents</Link>
+        <Link href="/documents">
+          <ArrowLeft /> Back to documents
+        </Link>
       </Button>
     </main>
   );

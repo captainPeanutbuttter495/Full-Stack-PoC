@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {Leaf} from 'lucide-react'
+import { Leaf } from "lucide-react";
 
 export default function Wordmark() {
   return (

@@ -54,7 +54,7 @@ export default function DocumentsPage() {
       (doc) =>
         doc.title.toLowerCase().includes(q) ||
         doc.description.toLowerCase().includes(q) ||
-        (doc.category ?? "").toLowerCase().includes(q)
+        (doc.category ?? "").toLowerCase().includes(q),
     );
 
   return (

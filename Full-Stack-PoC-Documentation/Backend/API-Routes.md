@@ -2,10 +2,10 @@ API route handlers for the Pay-What-You-Want PoC. All routes use the Next.js App
 
 ## Routes Overview
 
-| Method | Route                  | File                                  | Description                |
-| ------ | ---------------------- | ------------------------------------- | -------------------------- |
-| GET    | `/api/documents`       | `app/api/documents/route.ts`          | Returns all documents      |
-| GET    | `/api/documents/[id]`  | `app/api/documents/[id]/route.ts`     | Returns a single document  |
+| Method | Route                 | File                              | Description               |
+| ------ | --------------------- | --------------------------------- | ------------------------- |
+| GET    | `/api/documents`      | `app/api/documents/route.ts`      | Returns all documents     |
+| GET    | `/api/documents/[id]` | `app/api/documents/[id]/route.ts` | Returns a single document |
 
 ## GET /api/documents
 
@@ -45,11 +45,11 @@ API route handlers for the Pay-What-You-Want PoC. All routes use the Next.js App
 
 **Status codes:**
 
-| Code | Condition                                  | Response body                      |
-| ---- | ------------------------------------------ | ---------------------------------- |
-| 200  | Document found                             | Single document object (see above) |
-| 400  | `id` param is not a valid integer (`NaN`)  | `{ "error": "Invalid document ID" }` |
-| 404  | No document with that ID exists            | `{ "error": "Document not found" }` |
+| Code | Condition                                 | Response body                        |
+| ---- | ----------------------------------------- | ------------------------------------ |
+| 200  | Document found                            | Single document object (see above)   |
+| 400  | `id` param is not a valid integer (`NaN`) | `{ "error": "Invalid document ID" }` |
+| 404  | No document with that ID exists           | `{ "error": "Document not found" }`  |
 
 ## Serialization Notes
 

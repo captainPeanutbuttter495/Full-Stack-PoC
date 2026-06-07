@@ -58,7 +58,7 @@ export const checkSubmission = async (document_id: number, user_id: string) => {
   } catch (error) {
     return error instanceof Error ? error : new Error(String(error));
   }
-}
+};
 
 export const revokeSubmission = async (payment_intent_id: string) => {
   try {
@@ -69,4 +69,4 @@ export const revokeSubmission = async (payment_intent_id: string) => {
   } catch (error) {
     return error instanceof Error ? error : new Error(String(error));
   }
-}
+};

@@ -56,7 +56,9 @@ export default function SiteHeader() {
   };
 
   return (
-    <header className={`flex items-center justify-between gap-3 min-w-0 w-full p-4 sticky top-0 z-10 bg-background transition-[border-color] duration-200 border-b ${!isHome || scrolled ? "border-border" : "border-transparent"}`}>
+    <header
+      className={`flex items-center justify-between gap-3 min-w-0 w-full p-4 sticky top-0 z-10 bg-background transition-[border-color] duration-200 border-b ${!isHome || scrolled ? "border-border" : "border-transparent"}`}
+    >
       <Wordmark />
       <nav className="flex gap-4" aria-label="Primary">
         <Button variant={isHome ? "default" : "ghost"} asChild>
@@ -69,32 +71,37 @@ export default function SiteHeader() {
             Documents
           </Link>
         </Button>
-      <div className="flex items-center">
-        {user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Avatar className="cursor-pointer">
-                <AvatarFallback>
-                  {user.email?.[0].toUpperCase() ?? "?"}
-                </AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel className="truncate max-w-48">
-                {user.email}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <Button variant="outline" asChild>
-            <Link href="/auth/login" ><User2 /> Sign in</Link>
-          </Button>
-        )}
-      </div>
+        <div className="flex items-center">
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Avatar className="cursor-pointer">
+                  <AvatarFallback>
+                    {user.email?.[0].toUpperCase() ?? "?"}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel className="truncate max-w-48">
+                  {user.email}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={handleSignOut}
+                >
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button variant="outline" asChild>
+              <Link href="/auth/login">
+                <User2 /> Sign in
+              </Link>
+            </Button>
+          )}
+        </div>
       </nav>
     </header>
   );

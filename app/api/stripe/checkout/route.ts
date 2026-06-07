@@ -23,7 +23,11 @@ export async function POST(request: Request) {
 
   const { document_id, amount } = await request.json();
 
-  if (typeof document_id !== "number" || typeof amount !== "number" || amount < 0.5) {
+  if (
+    typeof document_id !== "number" ||
+    typeof amount !== "number" ||
+    amount < 0.5
+  ) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 

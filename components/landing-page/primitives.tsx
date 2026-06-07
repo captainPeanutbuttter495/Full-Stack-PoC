@@ -3,7 +3,13 @@ import { motion } from "motion/react";
 
 export const ease = [0.22, 0.61, 0.36, 1] as const;
 
-export function Reveal({ children, className }: { children: React.ReactNode; className?: string }) {
+export function Reveal({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <motion.div
       className={className}
@@ -17,7 +23,13 @@ export function Reveal({ children, className }: { children: React.ReactNode; cla
   );
 }
 
-export function Eyebrow({ children, center = false }: { children: React.ReactNode; center?: boolean }) {
+export function Eyebrow({
+  children,
+  center = false,
+}: {
+  children: React.ReactNode;
+  center?: boolean;
+}) {
   return (
     <span
       className={`flex items-center gap-[11px] font-mono text-[11.5px] uppercase tracking-[0.16em] text-muted-foreground ${center ? "justify-center" : ""}`}
@@ -30,7 +42,7 @@ export function Eyebrow({ children, center = false }: { children: React.ReactNod
 export function SectionTag({ children }: { children: React.ReactNode }) {
   return (
     <span className="flex items-center gap-[10px] font-mono text-[11.5px] uppercase tracking-[0.16em] text-primary ">
-    {children}
+      {children}
     </span>
   );
 }

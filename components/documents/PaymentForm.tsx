@@ -87,7 +87,7 @@ function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
             e.preventDefault();
             handlePayment();
           }}
-          className='flex flex-col gap-4'
+          className="flex flex-col gap-4"
         >
           <InputGroup>
             <InputGroupInput

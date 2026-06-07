@@ -21,6 +21,7 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 ## What's Implemented
 
 ### Pages & Routing
+
 - **Landing page** (`app/page.tsx`) — hero, features, CTA
 - **Documents page** (`app/documents/page.tsx`) — document cards with inline payment flow, loading skeletons, live search (title/category/description), and an All / Owned tab filter
 - **Success page** (`app/documents/success/page.tsx`) — retrieves the Stripe session server-side, shows document title, amount paid, and download button
@@ -29,6 +30,7 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 - **Auth callback** (`app/auth/callback/route.ts`) — exchanges Supabase OAuth code for a session
 
 ### API Routes
+
 - `GET /api/documents` — returns all documents ordered by creation date
 - `GET /api/documents/[id]` — returns a single document; 400 on invalid ID, 404 on missing
 - `POST /api/stripe/checkout` — creates a Stripe Checkout Session; requires auth; validates amount ≥ $0.50; embeds `document_id` and `user_id` in session metadata
@@ -37,6 +39,7 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 - `GET /api/download/[documentId]` — verifies ownership then returns a 1-hour Supabase Storage signed URL (requires auth)
 
 ### Payment Flow
+
 1. User clicks **Select** on a document card → `PaymentForm` dialog opens
 2. User enters an amount (≥ $0.50) and submits → `POST /api/stripe/checkout` creates a Session and returns its URL
 3. User is redirected to Stripe-hosted Checkout
@@ -46,12 +49,14 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 7. If a charge is refunded, `charge.refunded` webhook fires → submission status set to `refunded`, revoking download access
 
 ### Components
+
 - **Layout** — `components/site-header.tsx` (nav, scroll-based border, user dropdown), `components/site-footer.tsx`, `components/wordmark.tsx`
 - **Landing page** — `components/landing-page/` (split into `hero-section`, `features-section`, `cta-section`, `primitives`)
 - **Documents** — `components/documents/DocumentItem.tsx`, `DocumentItemSkeleton.tsx`, `PaymentForm.tsx`, `DownloadButton.tsx`
 - **UI primitives** — `avatar`, `button`, `card`, `dialog`, `dropdown-menu`, `field`, `input`, `input-group`, `label`, `separator`, `skeleton`, `tabs`, `textarea`
 
 ### Library & Data Layer
+
 - **Prisma client** (`lib/prisma.ts`) — singleton with `PrismaPg` adapter; uses `DATABASE_URL` at runtime
 - **Document queries** (`lib/documents.ts`) — `getAllDocuments()`, `getDocumentById(id)`
 - **Auth helpers** (`lib/auth.ts`) — `signInWithEmail`, `signUpWithEmail`, `signOut`, `continueWithGoogle`
@@ -59,6 +64,7 @@ A proof-of-concept full-stack web app. A visitor selects a document, enters any 
 - **Supabase clients** — `lib/supabase/client.ts` (browser), `lib/supabase/server.ts` (server/cookie-based), `lib/supabase/admin.ts` (service-role for Storage)
 
 ### Database
+
 - **Schema** (`prisma/schema.prisma`) — `documents` and `submissions` models; `submissions` stores `stripe_session_id`, `stripe_payment_intent_id`, and `status` (`active` | `refunded`)
 - **Config** (`prisma.config.ts`) — dual-URL: `DIRECT_URL` (session-mode, port 5432) for CLI; `DATABASE_URL` (transaction-mode pooler) at runtime
 
@@ -119,21 +125,25 @@ Stripe delivers webhook events to a public URL. In development, use the Stripe C
 **Install the Stripe CLI** (if not already):
 
 macOS:
+
 ```bash
 brew install stripe/stripe-cli/stripe
 ```
 
 Windows:
+
 ```powershell
 npm install -g @stripe/cli
 ```
 
 **Log in:**
+
 ```bash
 stripe login
 ```
 
 **Start forwarding:**
+
 ```bash
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
@@ -152,10 +162,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 **Test card numbers** (no real money):
 
-| Number | Scenario |
-|---|---|
+| Number                | Scenario         |
+| --------------------- | ---------------- |
 | `4242 4242 4242 4242` | Payment succeeds |
-| `4000 0000 0000 9995` | Card declined |
+| `4000 0000 0000 9995` | Card declined    |
 
 Use any future expiry, any 3-digit CVC, and any postcode.
 
@@ -186,15 +196,15 @@ The Stripe CLI is only needed for local development — Stripe's servers cannot 
 
 ### Environment variables reference
 
-| Variable | Used by | Where to get it |
-|---|---|---|
-| `DATABASE_URL` | Runtime (`lib/prisma.ts`) | Supabase → Database → Connection string → Transaction mode (port 6543) |
-| `DIRECT_URL` | CLI (`prisma.config.ts`) | Supabase → Database → Connection string → Session mode (port 5432) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase clients | Supabase → Project Settings → API → Project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase clients | Supabase → Project Settings → API → Publishable key |
-| `SUPABASE_SERVICE_ROLE_KEY` | `lib/supabase/admin.ts` | Supabase → Project Settings → API → `service_role` key |
-| `STRIPE_SECRET_KEY` | `app/api/stripe/` | Stripe Dashboard → Developers → API keys → Secret key |
-| `STRIPE_WEBHOOK_SECRET` | `app/api/stripe/webhook/route.ts` | Stripe CLI (`stripe listen`) for local; Stripe Dashboard → Webhooks for production |
+| Variable                               | Used by                           | Where to get it                                                                    |
+| -------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------- |
+| `DATABASE_URL`                         | Runtime (`lib/prisma.ts`)         | Supabase → Database → Connection string → Transaction mode (port 6543)             |
+| `DIRECT_URL`                           | CLI (`prisma.config.ts`)          | Supabase → Database → Connection string → Session mode (port 5432)                 |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Supabase clients                  | Supabase → Project Settings → API → Project URL                                    |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase clients                  | Supabase → Project Settings → API → Publishable key                                |
+| `SUPABASE_SERVICE_ROLE_KEY`            | `lib/supabase/admin.ts`           | Supabase → Project Settings → API → `service_role` key                             |
+| `STRIPE_SECRET_KEY`                    | `app/api/stripe/`                 | Stripe Dashboard → Developers → API keys → Secret key                              |
+| `STRIPE_WEBHOOK_SECRET`                | `app/api/stripe/webhook/route.ts` | Stripe CLI (`stripe listen`) for local; Stripe Dashboard → Webhooks for production |
 
 ## Commands
 

@@ -3,10 +3,26 @@ import { DollarSign, Zap, Database, ShieldCheck } from "lucide-react";
 import { Reveal, SectionTag } from "./primitives";
 
 const FEATURES = [
-  { title: "Name your price",     desc: "You decide what it's worth. No minimum beyond $0, and no suggested price you have to match.",              Icon: DollarSign  },
-  { title: "Low friction",        desc: "Sign in once, then it's select, name your price, pay. No upsells, no five-step checkout in the way.",      Icon: Zap         },
-  { title: "Real infrastructure", desc: "PostgreSQL, Prisma, Supabase, Stripe, Next.js App Router. This is how production apps are actually built.", Icon: Database    },
-  { title: "Designed for trust",  desc: "Server-side validation on every submission. You only get the download once the server confirms.",           Icon: ShieldCheck },
+  {
+    title: "Name your price",
+    desc: "You decide what it's worth. No minimum beyond $0, and no suggested price you have to match.",
+    Icon: DollarSign,
+  },
+  {
+    title: "Low friction",
+    desc: "Sign in once, then it's select, name your price, pay. No upsells, no five-step checkout in the way.",
+    Icon: Zap,
+  },
+  {
+    title: "Real infrastructure",
+    desc: "PostgreSQL, Prisma, Supabase, Stripe, Next.js App Router. This is how production apps are actually built.",
+    Icon: Database,
+  },
+  {
+    title: "Designed for trust",
+    desc: "Server-side validation on every submission. You only get the download once the server confirms.",
+    Icon: ShieldCheck,
+  },
 ];
 
 export function FeaturesSection() {
@@ -19,7 +35,8 @@ export function FeaturesSection() {
             Designed with intention.
           </h2>
           <p className="mt-4 max-w-[50ch] text-[16.5px] leading-[1.55] text-muted-foreground [text-wrap:pretty]">
-            Every decision here removes friction or earns trust. Nothing else made the cut.
+            Every decision here removes friction or earns trust. Nothing else
+            made the cut.
           </p>
         </Reveal>
 
@@ -37,7 +54,9 @@ export function FeaturesSection() {
                 <h3 className="mt-5 text-[17px] font-semibold tracking-tight text-foreground">
                   {title}
                 </h3>
-                <p className="mt-[11px] text-sm leading-[1.6] text-muted-foreground">{desc}</p>
+                <p className="mt-[11px] text-sm leading-[1.6] text-muted-foreground">
+                  {desc}
+                </p>
               </article>
             ))}
           </div>

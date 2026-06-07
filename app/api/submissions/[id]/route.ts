@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { checkSubmission } from "@/lib/submissions";
 import { createClient } from "@/lib/supabase/server";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     const { id } = await params;
     const document_id = parseInt(id, 10);
@@ -12,7 +15,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
 
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const user_id = user?.id ?? null;
 
     if (!user_id) {

@@ -14,8 +14,14 @@ export function CtaSection() {
         <p className="mt-5 max-w-[40ch] text-[17px] text-muted-foreground [text-wrap:pretty]">
           Browse the full catalog and name your price.
         </p>
-        <Button size="lg" className="mt-[34px] h-[52px] rounded-[11px] px-6 text-[15.5px] max-sm:w-full" asChild>
-          <Link href="/documents">Browse Documents <ArrowRight size={17} /></Link>
+        <Button
+          size="lg"
+          className="mt-[34px] h-[52px] rounded-[11px] px-6 text-[15.5px] max-sm:w-full"
+          asChild
+        >
+          <Link href="/documents">
+            Browse Documents <ArrowRight size={17} />
+          </Link>
         </Button>
         <span className="mt-[18px] font-mono text-xs text-muted-foreground">
           Quick sign-in · Secure Stripe checkout · Instant download
