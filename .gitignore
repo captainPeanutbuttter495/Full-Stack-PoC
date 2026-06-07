@@ -57,3 +57,7 @@ test-results/
 
 # Playwright auth state — contains live session tokens, never commit
 .auth/
+
+# Kubernetes — the filled-in Secret holds real runtime credentials, never commit.
+# Only k8s/secret.example.yaml (placeholders) is tracked.
+k8s/secret.yaml

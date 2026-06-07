@@ -1,0 +1,16 @@
+# Normalize line endings to LF in the repository for all text files.
+# Without this, core.autocrlf=true checks files out as CRLF on Windows, which
+# makes `prettier --check` (endOfLine: "lf") flag the entire tree locally even
+# though the committed blobs are LF. Pinning eol=lf keeps the working tree, the
+# committed blobs, and CI (Linux) consistent.
+* text=auto eol=lf
+
+# Keep binary assets untouched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

@@ -1,0 +1,107 @@
+# Tests pipeline — runs on the `tests` validation branch.
+#
+# Runs the full quality gate (lint, format, build, Vitest). Playwright E2E is a
+# separate, gated job: it needs a dev server + Supabase/Stripe test credentials,
+# so it only runs when the repo variable E2E_ENABLED == 'true'.
+#
+# NOTE (activation): GitHub Actions only fires a `push` workflow that exists on
+# the pushed branch. This file is authored off production-main, so it does not
+# run on `tests` until the workflows are merged onto `tests` (merge
+# production-main -> tests). See Deployment/CI-CD.md.
+name: tests
+
+on:
+  push:
+    branches: [tests]
+  pull_request:
+    branches: [tests]
+
+jobs:
+  test:
+    name: Lint, format, build & Vitest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack (pnpm)
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+      # Vitest only — vitest.config.ts excludes e2e/, so Playwright specs never run here.
+      - name: Vitest (API/unit)
+        run: pnpm test
+
+  e2e:
+    name: Playwright E2E (gated)
+    needs: test
+    runs-on: ubuntu-latest
+    # The `secrets` context is not allowed in a job-level `if`, so gate on a repo
+    # variable instead. Set the `E2E_ENABLED` Actions variable to 'true' only
+    # once Supabase/Stripe test credentials are configured as secrets.
+    if: ${{ vars.E2E_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack (pnpm)
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # Playwright's webServer boots `pnpm dev`; CI=true enables retries and
+      # forbids `.only`. The auth.setup project signs in the test user and writes
+      # .auth/user.json before the authenticated specs run.
+      - name: Run E2E
+        run: pnpm test:e2e
+        env:
+          CI: "true"
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

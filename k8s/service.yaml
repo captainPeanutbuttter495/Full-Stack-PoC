@@ -1,0 +1,19 @@
+# Stable in-cluster address for the app. ClusterIP is vendor-neutral; the
+# Ingress is what exposes it publicly. Service port 80 -> container port 3000.
+apiVersion: v1
+kind: Service
+metadata:
+  name: pwyw-web
+  namespace: pwyw
+  labels:
+    app.kubernetes.io/name: pwyw-web
+    app.kubernetes.io/part-of: pwyw
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: pwyw-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
