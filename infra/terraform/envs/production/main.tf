@@ -89,3 +89,18 @@ module "eks_addons" {
 
   depends_on = [module.eks]
 }
+
+# Route 53 + ACM for public HTTPS. All values are placeholders until you set the
+# real domain/zone in terraform.tfvars (see *.tfvars.example).
+module "dns_tls" {
+  source = "../../modules/dns-tls"
+  count  = var.enable_dns_tls ? 1 : 0
+
+  domain_name        = var.domain_name
+  hosted_zone_id     = var.hosted_zone_id
+  app_hostname       = var.app_hostname
+  certificate_arn    = var.acm_certificate_arn
+  create_certificate = var.create_acm_certificate
+
+  tags = var.tags
+}

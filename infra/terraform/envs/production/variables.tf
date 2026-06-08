@@ -120,6 +120,43 @@ variable "install_eks_addons" {
   default     = true
 }
 
+# --- DNS / TLS (Route 53 + ACM) — placeholders until you set real values --------
+variable "enable_dns_tls" {
+  description = "Manage Route 53 + ACM for the app host."
+  type        = bool
+  default     = true
+}
+
+variable "domain_name" {
+  description = "Registered domain (placeholder: example.com)."
+  type        = string
+  default     = "example.com"
+}
+
+variable "hosted_zone_id" {
+  description = "Route 53 hosted zone ID. Required to apply DNS/TLS."
+  type        = string
+  default     = ""
+}
+
+variable "app_hostname" {
+  description = "Public hostname for the app (placeholder: pwyw.example.com)."
+  type        = string
+  default     = "pwyw.example.com"
+}
+
+variable "acm_certificate_arn" {
+  description = "Existing ACM cert ARN to reuse. Leave empty to issue a new one."
+  type        = string
+  default     = ""
+}
+
+variable "create_acm_certificate" {
+  description = "Issue a DNS-validated ACM cert (true) or reuse acm_certificate_arn (false)."
+  type        = bool
+  default     = true
+}
+
 # --- IRSA placeholders (narrowed once secrets/storage phases exist) ----------
 variable "secrets_manager_arns" {
   description = "Secrets Manager ARNs the External Secrets Operator may read."

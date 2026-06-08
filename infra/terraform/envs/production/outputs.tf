@@ -39,3 +39,14 @@ output "app_role_arn" {
   description = "IRSA role ARN for the app ServiceAccount (pwyw:pwyw-web)."
   value       = module.irsa.app_role_arn
 }
+
+# --- DNS / TLS (null when enable_dns_tls = false) ---------------------------
+output "acm_certificate_arn" {
+  description = "ACM cert ARN — set on the ALB Ingress certificate-arn annotation."
+  value       = try(module.dns_tls[0].certificate_arn, null)
+}
+
+output "app_hostname" {
+  description = "Public hostname — set as the ALB Ingress rule host."
+  value       = try(module.dns_tls[0].app_hostname, null)
+}

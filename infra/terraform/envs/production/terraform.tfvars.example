@@ -28,6 +28,14 @@ node_desired_size   = 2
 #   terraform apply -target=module.network -target=module.eks   # then full apply
 install_eks_addons = true
 
+# --- DNS / TLS (Route 53 + ACM) — replace placeholders with your real values ---
+enable_dns_tls         = true
+domain_name            = "example.com"             # your registered domain
+hosted_zone_id         = "Z0123456789ABCDEFGHIJK"  # your Route 53 zone ID
+app_hostname           = "pwyw.example.com"         # public app host
+create_acm_certificate = true                       # issue a DNS-validated cert
+acm_certificate_arn    = ""                          # or set this and flip create_* to false
+
 # Grant the CI deploy role (bootstrap/github-oidc output) kubectl access:
 # eks_access_entries = {
 #   ci = {

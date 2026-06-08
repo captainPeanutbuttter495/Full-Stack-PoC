@@ -32,3 +32,11 @@ node_desired_size   = 1
 # Helm add-ons (ALB controller + ESO). First apply tip if a provider error occurs:
 #   terraform apply -target=module.network -target=module.eks   # then full apply
 install_eks_addons = true
+
+# --- DNS / TLS (kept for the demo: real HTTPS + domain) ---
+enable_dns_tls         = true
+domain_name            = "example.com"             # your registered domain
+hosted_zone_id         = "Z0123456789ABCDEFGHIJK"  # your Route 53 zone ID
+app_hostname           = "demo.example.com"         # demo app host
+create_acm_certificate = true
+acm_certificate_arn    = ""
