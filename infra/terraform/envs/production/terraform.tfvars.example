@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars and adjust. No secrets belong in this file.
+region              = "us-west-2"
+ecr_repository_name = "pwyw-web"
+
+tags = {
+  Project     = "pwyw"
+  ManagedBy   = "terraform"
+  Environment = "production"
+}
