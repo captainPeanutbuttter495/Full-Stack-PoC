@@ -1,0 +1,24 @@
+# Horizontal Pod Autoscaler — scales the app on CPU. Production-like (min 2). For
+# the cheapest single-node demo you can drop minReplicas to 1.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pwyw-web
+  namespace: pwyw
+  labels:
+    app.kubernetes.io/name: pwyw-web
+    app.kubernetes.io/part-of: pwyw
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pwyw-web
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

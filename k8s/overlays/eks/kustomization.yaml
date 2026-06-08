@@ -1,0 +1,30 @@
+# EKS overlay. Keeps the portable base manifests (k8s/*.yaml) untouched and layers
+# AWS-specific concerns on top: ECR image, IRSA ServiceAccount, ALB Ingress, HPA,
+# and a PodDisruptionBudget. Apply with:  kubectl apply -k k8s/overlays/eks
+#
+# Placeholders (ACCOUNT_ID, REGION, sha tag, ARNs, host) are filled at deploy time
+# from the Terraform outputs — no real account IDs, ARNs, or domains are committed.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: pwyw
+
+resources:
+  - ../../namespace.yaml
+  - ../../configmap.yaml
+  - ../../service.yaml
+  - ../../deployment.yaml
+  - serviceaccount.yaml
+  - ingress-alb.yaml
+  - hpa.yaml
+  - pdb.yaml
+
+# Repoint GHCR -> ECR. CI overrides newTag with the immutable sha-<commit> at deploy
+# (see the deploy job in .github/workflows/production.yml).
+images:
+  - name: ghcr.io/captainpeanutbuttter495/full-stack-poc
+    newName: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/pwyw-web
+    newTag: production-main
+
+patches:
+  - path: deployment-patch.yaml

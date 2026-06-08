@@ -1,0 +1,15 @@
+# Keeps at least one pod serving during voluntary disruptions (node drains,
+# rolling updates).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pwyw-web
+  namespace: pwyw
+  labels:
+    app.kubernetes.io/name: pwyw-web
+    app.kubernetes.io/part-of: pwyw
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pwyw-web

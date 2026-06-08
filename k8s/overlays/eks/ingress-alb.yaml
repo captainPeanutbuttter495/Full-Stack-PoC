@@ -1,0 +1,36 @@
+# ALB Ingress for EKS. The AWS Load Balancer Controller turns this into an
+# internet-facing ALB; ACM terminates TLS on the HTTPS listener. Replaces the base
+# generic Ingress (same name) — do not also include ../../ingress.yaml.
+#
+# Placeholders (certificate ARN, host) are filled at deploy from the dns-tls
+# Terraform outputs. No real ARN or domain is committed.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pwyw-web
+  namespace: pwyw
+  labels:
+    app.kubernetes.io/name: pwyw-web
+    app.kubernetes.io/part-of: pwyw
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    # ACM certificate ARN — placeholder, replace at deploy.
+    alb.ingress.kubernetes.io/certificate-arn: REPLACE_WITH_ACM_CERTIFICATE_ARN
+spec:
+  ingressClassName: alb
+  rules:
+    # Placeholder host — replace with your app_hostname (e.g. via dns-tls outputs).
+    - host: pwyw.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pwyw-web
+                port:
+                  number: 80

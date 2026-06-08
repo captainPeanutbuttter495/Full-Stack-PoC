@@ -1,0 +1,12 @@
+# Patches the base Deployment for EKS: run >=2 replicas for availability/rolling
+# updates and attach the IRSA ServiceAccount. (The image is set by the overlay's
+# `images:` transformer, not here.)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pwyw-web
+spec:
+  replicas: 2
+  template:
+    spec:
+      serviceAccountName: pwyw-web
