@@ -57,6 +57,31 @@ lower-cased from `${{ github.repository }}` because GHCR requires lower-case).
 | `:<git-sha>`       | Immutable, traceable — **pin this in `deployment.yaml` for a rollout** |
 | `:latest`          | Optional convenience pointer only — not a deploy target                |
 
+### `Future:` AWS / ECR Publish (additive)
+
+A third job, `ecr`, publishes the **same image** to Amazon ECR for the EKS path
+(`Deployment/AWS.md`). It is **additive** — the GHCR `docker` job is unchanged, so
+existing CI behavior is preserved. The job:
+
+1. Runs only on `push` **and** only when `vars.AWS_REGION` is set (un-configured
+   repos/forks skip it cleanly rather than failing).
+2. Authenticates to AWS via **GitHub OIDC** (`id-token: write`) by assuming the
+   deploy role from `infra/terraform/bootstrap/github-oidc` — **no long-lived AWS
+   keys**.
+3. Pushes `:<ECR>/<repo>:production-main` (moving) and `:sha-<commit>` (immutable
+   pin the K8s manifests reference). Prefixes match the `modules/ecr` lifecycle
+   policy.
+
+### `Future:` Continuous Deploy to EKS
+
+A `deploy` job (`needs: ecr`) rolls the running EKS Deployment to the freshly pushed
+image. It authenticates via the same OIDC role, runs `aws eks update-kubeconfig`,
+then `kubectl -n pwyw set image deployment/pwyw-web web=<ECR>:sha-<commit>` and waits
+for the rollout. It is **image-roll only** — the cluster and the EKS overlay
+(`k8s/overlays/eks`) are provisioned once out-of-band with the real IRSA/cert/host
+values, so this job never touches the manifest placeholders. Gated on
+`vars.EKS_CLUSTER_NAME`, so it stays skipped until the cluster exists.
+
 ## Required GitHub Secrets & Variables
 
 Configure these in **Settings → Secrets and variables → Actions** before the
@@ -75,6 +100,10 @@ pipelines can fully run.
 | `TEST_USER_PASSWORD`                   | Secret       | E2E                           | Playwright sign-in                             |
 | `E2E_ENABLED`                          | **Variable** | `tests` e2e gate              | Set to `'true'` to enable the E2E job          |
 | `GITHUB_TOKEN`                         | (built-in)   | GHCR push                     | Provided automatically; no setup               |
+| `AWS_DEPLOY_ROLE_ARN`                  | Secret       | `ecr` job (OIDC)              | Role ARN from `bootstrap/github-oidc`          |
+| `AWS_REGION`                           | **Variable** | `ecr` + `deploy` jobs         | Also the ECR-path gate — unset = `ecr` skipped |
+| `ECR_REPOSITORY`                       | **Variable** | `ecr` + `deploy` jobs         | Repo name, e.g. `pwyw-web` (`modules/ecr`)     |
+| `EKS_CLUSTER_NAME`                     | **Variable** | `deploy` job                  | Deploy-path gate — unset = `deploy` skipped    |
 
 ## ⚠️ Activation — getting `tests.yml` to run on `tests`
 

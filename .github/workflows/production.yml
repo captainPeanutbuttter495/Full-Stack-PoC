@@ -93,3 +93,84 @@ jobs:
           build-args: |
             NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+  # AWS path (Future:). Publishes the same image to Amazon ECR for the EKS
+  # deployment. ADDITIVE — the GHCR `docker` job above is unchanged, so existing
+  # CI behavior is preserved. This job no-ops cleanly until the AWS variables and
+  # the OIDC deploy role (infra/terraform/bootstrap/github-oidc) exist.
+  ecr:
+    name: Build & push image to Amazon ECR
+    needs: verify
+    runs-on: ubuntu-latest
+    # Only on a real push, and only when the repo is wired for AWS (so forks /
+    # un-configured repos skip it instead of failing).
+    if: ${{ github.event_name == 'push' && vars.AWS_REGION != '' }}
+    permissions:
+      contents: read
+      id-token: write # required to request the GitHub OIDC token for AWS
+    steps:
+      - uses: actions/checkout@v4
+
+      # Exchanges the GitHub OIDC token for short-lived STS credentials by
+      # assuming the deploy role. No long-lived AWS access keys are stored.
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # `production-main` is the moving convenience tag; `sha-<commit>` is the
+      # immutable pin the K8s manifests reference for a specific rollout. The
+      # prefixes match the ECR lifecycle policy in modules/ecr.
+      - name: Compute image tags
+        id: tags
+        run: |
+          IMAGE="${{ steps.ecr-login.outputs.registry }}/${{ vars.ECR_REPOSITORY }}"
+          echo "tags=${IMAGE}:production-main,${IMAGE}:sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push to ECR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+  # Continuous deploy (Future:). Rolls the running EKS Deployment to the freshly
+  # pushed image. Assumes the cluster + EKS overlay were provisioned once (with the
+  # real IRSA/cert/host values filled in) — this job only moves the image forward,
+  # so it never needs the manifest placeholders. Gated on vars.EKS_CLUSTER_NAME, so
+  # it stays skipped until the cluster exists. ubuntu-latest ships aws CLI v2 +
+  # kubectl, so no extra installs.
+  deploy:
+    name: Deploy to EKS
+    needs: ecr
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && vars.EKS_CLUSTER_NAME != '' }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${{ vars.AWS_REGION }}"
+
+      # Roll the Deployment to the immutable sha-<commit> tag pushed by the `ecr`
+      # job, then wait for the rollout to finish (fails the run if it stalls).
+      - name: Roll deployment to the new image
+        run: |
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          IMAGE="${ACCOUNT_ID}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/${{ vars.ECR_REPOSITORY }}:sha-${GITHUB_SHA}"
+          kubectl -n pwyw set image deployment/pwyw-web web="$IMAGE"
+          kubectl -n pwyw rollout status deployment/pwyw-web --timeout=300s

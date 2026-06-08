@@ -1,0 +1,68 @@
+# PRODUCTION-LIKE MODE. Copy to terraform.tfvars and adjust. No secrets here.
+# For a cheap, short-lived demo, copy demo.tfvars.example instead.
+region              = "us-west-2"
+ecr_repository_name = "pwyw-web"
+ecr_force_delete    = false # keep images safe; do not auto-delete on destroy
+
+# --- Network (private nodes behind NAT) ---
+vpc_cidr                   = "10.0.0.0/16"
+azs                        = ["us-west-2a", "us-west-2b", "us-west-2c"]
+private_subnets            = ["10.0.0.0/20", "10.0.16.0/20", "10.0.32.0/20"]
+public_subnets             = ["10.0.48.0/20", "10.0.64.0/20", "10.0.80.0/20"]
+enable_nat_gateway         = true
+single_nat_gateway         = true
+enable_s3_gateway_endpoint = true
+worker_nodes_public        = false # private nodes
+
+# --- EKS (2× on-demand for availability + rolling updates) ---
+cluster_name        = "pwyw"
+cluster_version     = "1.30"
+node_instance_types = ["t3.medium"]
+node_capacity_type  = "ON_DEMAND"
+node_min_size       = 2
+node_max_size       = 4
+node_desired_size   = 2
+
+# Helm add-ons (ALB controller + ESO). Keep true normally; set false ONLY for the
+# very first apply if you hit a provider-reaching-the-cluster error, then re-enable:
+#   terraform apply -target=module.network -target=module.eks   # then full apply
+install_eks_addons = true
+
+# --- DNS / TLS (Route 53 + ACM) — replace placeholders with your real values ---
+enable_dns_tls         = true
+domain_name            = "example.com"             # your registered domain
+hosted_zone_id         = "Z0123456789ABCDEFGHIJK"  # your Route 53 zone ID
+app_hostname           = "pwyw.example.com"         # public app host
+create_acm_certificate = true                       # issue a DNS-validated cert
+acm_certificate_arn    = ""                          # or set this and flip create_* to false
+
+# --- Secrets Manager + S3/CloudFront downloads ---
+enable_secrets          = true
+secrets_prefix          = "pwyw"
+enable_storage_cdn      = true
+documents_bucket_name   = "pwyw-documents-REPLACE-ME" # must be globally unique
+documents_force_destroy = false                        # keep documents safe in prod
+cloudfront_price_class  = "PriceClass_100"
+
+# Grant the CI deploy role (bootstrap/github-oidc output) kubectl access:
+# eks_access_entries = {
+#   ci = {
+#     principal_arn = "arn:aws:iam::<account-id>:role/pwyw-github-actions-deploy"
+#     policy_associations = {
+#       admin = {
+#         policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+#         access_scope = { type = "cluster" }
+#       }
+#     }
+#   }
+# }
+
+# --- IRSA placeholders (narrow once secrets/storage phases exist) ---
+# secrets_manager_arns         = ["arn:aws:secretsmanager:us-west-2:<account-id>:secret:pwyw/*"]
+# documents_bucket_object_arns = ["arn:aws:s3:::pwyw-documents/*"]
+
+tags = {
+  Project     = "pwyw"
+  ManagedBy   = "terraform"
+  Environment = "production"
+}
