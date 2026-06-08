@@ -64,13 +64,13 @@ allowed OIDC subjects, and repository names are all variables — see each stack
 The `envs/production` stack ships two example variable files. Copy the one you want
 to `terraform.tfvars` (gitignored).
 
-| Concern | Production-like (`terraform.tfvars.example`) | Demo (`demo.tfvars.example`) |
-| ------- | -------------------------------------------- | ---------------------------- |
-| Nodes | Private subnets | **Public subnets** (`worker_nodes_public = true`) |
-| NAT gateway | On | **Off** (`enable_nat_gateway = false`) — saves ~$7.56/wk |
-| Node group | 2× `t3.medium` `ON_DEMAND` | **1× `t3.small` `SPOT`** |
-| S3 gateway endpoint | On | On (free, both modes) |
-| ECR `force_delete` | `false` (safe) | **`true`** (clean teardown) |
+| Concern             | Production-like (`terraform.tfvars.example`) | Demo (`demo.tfvars.example`)                             |
+| ------------------- | -------------------------------------------- | -------------------------------------------------------- |
+| Nodes               | Private subnets                              | **Public subnets** (`worker_nodes_public = true`)        |
+| NAT gateway         | On                                           | **Off** (`enable_nat_gateway = false`) — saves ~$7.56/wk |
+| Node group          | 2× `t3.medium` `ON_DEMAND`                   | **1× `t3.small` `SPOT`**                                 |
+| S3 gateway endpoint | On                                           | On (free, both modes)                                    |
+| ECR `force_delete`  | `false` (safe)                               | **`true`** (clean teardown)                              |
 
 The relevant toggles (`enable_nat_gateway`, `worker_nodes_public`,
 `enable_s3_gateway_endpoint`, `node_instance_types`, `node_capacity_type`,
