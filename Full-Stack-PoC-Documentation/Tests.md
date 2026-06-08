@@ -22,11 +22,11 @@ A reference of every testing tool used in [[Momentum]], what it does, and when t
 
 ### When to Pick Which
 
-| Project Type | Use |
-|---|---|
-| React Native / Expo | Jest (via `jest-expo`) |
-| Next.js / Vite / Node.js | Vitest |
-| Express backend | Either works; Momentum uses Vitest |
+| Project Type             | Use                                |
+| ------------------------ | ---------------------------------- |
+| React Native / Expo      | Jest (via `jest-expo`)             |
+| Next.js / Vite / Node.js | Vitest                             |
+| Express backend          | Either works; Momentum uses Vitest |
 
 ---
 
@@ -113,7 +113,7 @@ No Supertest, no HTTP server. The `Request` and `Response` objects are built int
 
 ```js
 const prismaMock = vi.hoisted(() => ({
-  userProfile: { findUnique: vi.fn(), create: vi.fn() }
+  userProfile: { findUnique: vi.fn(), create: vi.fn() },
 }));
 vi.mock("../db.js", () => ({ default: prismaMock }));
 ```
@@ -151,20 +151,20 @@ The `vi.hoisted()` pattern stays exactly the same — only the export shape chan
 
 ## Summary Table
 
-| Tool | Purpose | Use With | Momentum Location |
-|---|---|---|---|
-| **Vitest** | Test runner + mocking | Web / Node projects | `backend/test/` |
-| **Jest** | Test runner + mocking | React Native | `mobile/__tests__/` |
-| **@testing-library/react** | Component rendering + queries | Web React | -- |
-| **@testing-library/react-native** | Component rendering + queries | React Native | `mobile/__tests__/` |
-| **@testing-library/jest-dom** | DOM assertion matchers | Web React + Vitest/Jest | -- |
-| **@testing-library/jest-native** | RN assertion matchers | React Native + Jest | `mobile/test/setup.js` |
-| **@testing-library/user-event** | Realistic interaction simulation | Web React | -- |
-| **jsdom** | Fake browser DOM | Web React + Vitest | -- |
-| **@vitejs/plugin-react** | JSX transform for Vitest | Web React + Vitest | -- |
-| **Supertest** | HTTP testing for Express | Express backends | `backend/test/` |
-| **MSW** | Network-level fetch mocking | Integration tests | `mobile/test/msw/` |
-| **vi.hoisted()** | Pre-import mock setup | Vitest + Prisma/DB mocking | `backend/test/` |
+| Tool                              | Purpose                          | Use With                   | Momentum Location      |
+| --------------------------------- | -------------------------------- | -------------------------- | ---------------------- |
+| **Vitest**                        | Test runner + mocking            | Web / Node projects        | `backend/test/`        |
+| **Jest**                          | Test runner + mocking            | React Native               | `mobile/__tests__/`    |
+| **@testing-library/react**        | Component rendering + queries    | Web React                  | --                     |
+| **@testing-library/react-native** | Component rendering + queries    | React Native               | `mobile/__tests__/`    |
+| **@testing-library/jest-dom**     | DOM assertion matchers           | Web React + Vitest/Jest    | --                     |
+| **@testing-library/jest-native**  | RN assertion matchers            | React Native + Jest        | `mobile/test/setup.js` |
+| **@testing-library/user-event**   | Realistic interaction simulation | Web React                  | --                     |
+| **jsdom**                         | Fake browser DOM                 | Web React + Vitest         | --                     |
+| **@vitejs/plugin-react**          | JSX transform for Vitest         | Web React + Vitest         | --                     |
+| **Supertest**                     | HTTP testing for Express         | Express backends           | `backend/test/`        |
+| **MSW**                           | Network-level fetch mocking      | Integration tests          | `mobile/test/msw/`     |
+| **vi.hoisted()**                  | Pre-import mock setup            | Vitest + Prisma/DB mocking | `backend/test/`        |
 
 ---
 
@@ -201,18 +201,20 @@ pnpm dlx playwright show-report
 ```
 
 **Prerequisites:**
+
 - Database must be running (documents page fetches from `/api/documents` via Prisma)
 - `.env.local` must contain `TEST_USER_EMAIL` and `TEST_USER_PASSWORD` — a dedicated Supabase email/password test user
 
 **Test files:**
 
-| File | What it tests | Auth needed? |
-|---|---|---|
-| `e2e/auth.setup.ts` | Logs in with test user, saves session for other tests | — (setup step) |
-| `e2e/authenticated-documents-flow.spec.ts` | Homepage → documents → payment modal → sign out | Yes (uses saved session) |
-| `e2e/login-errors.spec.ts` | Wrong password, non-existent email | No (tests unauthenticated) |
+| File                                       | What it tests                                         | Auth needed?               |
+| ------------------------------------------ | ----------------------------------------------------- | -------------------------- |
+| `e2e/auth.setup.ts`                        | Logs in with test user, saves session for other tests | — (setup step)             |
+| `e2e/authenticated-documents-flow.spec.ts` | Homepage → documents → payment modal → sign out       | Yes (uses saved session)   |
+| `e2e/login-errors.spec.ts`                 | Wrong password, non-existent email                    | No (tests unauthenticated) |
 
 **How auth works in tests:**
+
 - `auth.setup.ts` runs first, logs in via the real login form, and saves the browser session (cookies) to `.auth/user.json`
 - Authenticated tests load that session automatically — they start already logged in
 - Unauthenticated tests (like `login-errors.spec.ts`) override this with `test.use({ storageState: { cookies: [], origins: [] } })`
@@ -230,6 +232,7 @@ pnpm add -D vitest @vitejs/plugin-react jsdom @testing-library/react @testing-li
 ```
 
 This gives you everything needed to test:
+
 - **Server functions** (`lib/documents.ts`) with mocked Prisma via `vi.hoisted()`
 - **API route handlers** (`app/api/documents/`) by calling exported functions directly
 - **React components** (`components/documents/`) with render + query + interact patterns

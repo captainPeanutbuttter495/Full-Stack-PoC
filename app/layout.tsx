@@ -28,12 +28,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable}`}
-    >
-      <body>
-        <main className="h-svh w-svw overflow-x-hidden">
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="overflow-x-hidden">
+        <main className="min-h-svh relative">
           <SiteHeader />
           {children}
           <SiteFooter />

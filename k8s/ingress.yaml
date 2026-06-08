@@ -1,0 +1,37 @@
+# Public entrypoint. Vendor-neutral networking.k8s.io/v1 Ingress — a concrete
+# IngressController (nginx, Traefik, or a cloud ALB controller) provides the
+# actual implementation in a real cluster.
+#
+# ⚠️ Stripe webhooks REQUIRE a publicly reachable URL. The Stripe dashboard must
+# be able to POST to https://<host>/api/stripe/webhook, so this host has to be
+# real and DNS-resolvable in any environment that processes live/test payments.
+# (For local dev the Docker docs use `stripe listen --forward-to ...` instead.)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pwyw-web
+  namespace: pwyw
+  labels:
+    app.kubernetes.io/name: pwyw-web
+    app.kubernetes.io/part-of: pwyw
+  # annotations:
+  #   # Pick the class for your controller, e.g.:
+  #   kubernetes.io/ingress.class: nginx
+spec:
+  # ingressClassName: nginx
+  # TLS termination — provide a cert (e.g. via cert-manager) and uncomment.
+  # tls:
+  #   - hosts:
+  #       - pwyw.example.com
+  #     secretName: pwyw-web-tls
+  rules:
+    - host: pwyw.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pwyw-web
+                port:
+                  number: 80

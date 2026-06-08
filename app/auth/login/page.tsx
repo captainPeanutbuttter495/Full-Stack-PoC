@@ -34,10 +34,10 @@ function LoginPage() {
 
     if (result instanceof AuthError) {
       setError(result.message);
-    } else {
-      setError(null);
+      return;
     }
 
+    setError(null);
     router.push("/");
   };
 
@@ -98,7 +98,7 @@ function LoginPage() {
             Sign in with Google
           </Button>
           <p>
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <a href="/auth/register" className="text-primary hover:underline">
               Sign up
             </a>

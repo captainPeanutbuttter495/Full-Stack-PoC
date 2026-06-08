@@ -1,0 +1,95 @@
+# Production pipeline — runs on the `production-main` integration branch.
+#
+# Verifies the app (lint, format, build), then builds the Docker image from the
+# existing root Dockerfile and pushes it to GHCR. Tests do NOT run here:
+# `production-main` carries app + infra only (no test files). The full Vitest
+# suite runs on the `tests` branch via tests.yml.
+name: production
+
+on:
+  push:
+    branches: [production-main]
+  pull_request:
+    branches: [production-main]
+
+jobs:
+  verify:
+    name: Lint, format & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Corepack provisions the exact pnpm pinned in package.json's
+      # "packageManager" field — same mechanism the Dockerfile uses.
+      - name: Enable Corepack (pnpm)
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # lib/generated/prisma is gitignored — regenerate before building.
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      # NEXT_PUBLIC_* are inlined into the client bundle at build time, so they
+      # must be present for `next build` to match the production image.
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+  docker:
+    name: Build & push image to GHCR
+    needs: verify
+    runs-on: ubuntu-latest
+    # Only publish on a real push to production-main. PRs run `verify` only —
+    # never push an image from an unmerged PR.
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Derive image tags. GHCR requires a lower-case image name, but
+      # ${{ github.repository }} can contain upper-case (Full-Stack-PoC), so
+      # lower-case it here. `production-main` is the primary deployable tag that
+      # the K8s manifests/docs reference; the commit SHA is the immutable tag to
+      # pin for a specific rollout. `latest` is optional convenience only.
+      - name: Compute image tags
+        id: tags
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "tags=${IMAGE}:production-main,${IMAGE}:${GITHUB_SHA},${IMAGE}:latest" >> "$GITHUB_OUTPUT"
+
+      # The Dockerfile already runs `prisma generate` + `pnpm build` internally,
+      # so this produces the real runtime image. NEXT_PUBLIC_* are passed as
+      # build-args (inlined into the bundle); no server secret is passed here.
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}

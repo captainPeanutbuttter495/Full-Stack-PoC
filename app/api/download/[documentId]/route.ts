@@ -13,12 +13,17 @@ export async function GET(
     const document_id = parseInt(documentId, 10);
 
     if (isNaN(document_id)) {
-      return NextResponse.json({ error: "Invalid document ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid document ID" },
+        { status: 400 },
+      );
     }
 
     // 1. Auth check
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -33,11 +38,17 @@ export async function GET(
     const document = await getDocumentById(document_id);
 
     if (!document) {
-      return NextResponse.json({ error: "Document not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Document not found" },
+        { status: 404 },
+      );
     }
 
     if (document instanceof Error) {
-      return NextResponse.json({ error: "Error fetching document" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Error fetching document" },
+        { status: 500 },
+      );
     }
 
     // 4. Generate 1-hour signed URL via service-role client

@@ -1,0 +1,8 @@
+# Dedicated namespace so all PoC objects are isolated from `default` and can be
+# torn down in one command: `kubectl delete namespace pwyw`.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pwyw
+  labels:
+    app.kubernetes.io/part-of: pwyw

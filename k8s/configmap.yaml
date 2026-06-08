@@ -1,0 +1,19 @@
+# Non-secret, public configuration for the app.
+#
+# NOTE: NEXT_PUBLIC_* values are inlined into the client bundle at BUILD time
+# (see the Dockerfile build-args), so changing them here does NOT change what the
+# browser already received — that requires a rebuilt image. They are kept here for
+# server-side reads and to document the values a given image was built against.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: pwyw
+data:
+  NEXT_PUBLIC_SUPABASE_URL: "https://<your-ref>.supabase.co"
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_xxx"
+  # Standalone server runtime defaults (match the Dockerfile).
+  NODE_ENV: "production"
+  PORT: "3000"
+  HOSTNAME: "0.0.0.0"
+  NEXT_TELEMETRY_DISABLED: "1"

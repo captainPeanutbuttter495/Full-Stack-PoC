@@ -1,19 +1,33 @@
 "use server";
 import { prisma } from "./prisma";
 
-export const getAllDocuments = async () => {
+export const getAllDocuments = async (userId: string | null = null) => {
   try {
     const docs = await prisma.documents.findMany({
       orderBy: { created_at: "desc" },
+      include: userId
+        ? {
+            submissions: {
+              where: { user_id: userId, status: "active" },
+              select: { id: true },
+            },
+          }
+        : undefined,
     });
 
-    // Serialize Prisma-specific types to plain JS values so the rest of
-    // the app (and lib/types.ts) doesn't need to know about Decimal/Date.
-    return docs.map((doc) => ({
-      ...doc,
-      suggested_price: doc.suggested_price ? Number(doc.suggested_price) : null,
-      created_at: doc.created_at ? doc.created_at.toISOString() : null,
-    }));
+    return docs.map((doc) => {
+      const { submissions, ...rest } = doc as typeof doc & {
+        submissions?: { id: string }[];
+      };
+      return {
+        ...rest,
+        suggested_price: doc.suggested_price
+          ? Number(doc.suggested_price)
+          : null,
+        created_at: doc.created_at ? doc.created_at.toISOString() : null,
+        isOwned: submissions ? submissions.length > 0 : false,
+      };
+    });
   } catch (error) {
     return error instanceof Error ? error : new Error(String(error));
   }
@@ -25,12 +39,17 @@ export const getDocumentById = async (id: number) => {
       where: { id },
     });
 
-    return doc ? {
-      ...doc,
-      suggested_price: doc.suggested_price ? Number(doc.suggested_price) : null,
-      created_at: doc.created_at ? doc.created_at.toISOString() : null,
-    } : null;
+    return doc
+      ? {
+          ...doc,
+          suggested_price: doc.suggested_price
+            ? Number(doc.suggested_price)
+            : null,
+          created_at: doc.created_at ? doc.created_at.toISOString() : null,
+          isOwned: false,
+        }
+      : null;
   } catch (error) {
     return error instanceof Error ? error : new Error(String(error));
   }
-}
+};
