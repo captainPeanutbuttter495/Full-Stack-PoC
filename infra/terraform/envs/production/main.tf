@@ -73,3 +73,19 @@ module "irsa" {
 
   tags = var.tags
 }
+
+# Helm-installed add-ons. Gated by install_eks_addons so the very first apply can
+# create the cluster before the helm/kubernetes providers need to reach it.
+module "eks_addons" {
+  source = "../../modules/eks-addons"
+  count  = var.install_eks_addons ? 1 : 0
+
+  cluster_name = var.cluster_name
+  region       = var.region
+  vpc_id       = module.network.vpc_id
+
+  alb_controller_role_arn   = module.irsa.alb_controller_role_arn
+  external_secrets_role_arn = module.irsa.external_secrets_role_arn
+
+  depends_on = [module.eks]
+}

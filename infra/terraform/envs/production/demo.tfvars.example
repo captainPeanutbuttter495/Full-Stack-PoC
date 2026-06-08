@@ -28,3 +28,7 @@ node_capacity_type  = "SPOT"
 node_min_size       = 1
 node_max_size       = 2
 node_desired_size   = 1
+
+# Helm add-ons (ALB controller + ESO). First apply tip if a provider error occurs:
+#   terraform apply -target=module.network -target=module.eks   # then full apply
+install_eks_addons = true

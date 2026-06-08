@@ -114,6 +114,12 @@ variable "eks_access_entries" {
   default     = {}
 }
 
+variable "install_eks_addons" {
+  description = "Install Helm add-ons (ALB controller, ESO). Set false for the first cluster-only apply, then true."
+  type        = bool
+  default     = true
+}
+
 # --- IRSA placeholders (narrowed once secrets/storage phases exist) ----------
 variable "secrets_manager_arns" {
   description = "Secrets Manager ARNs the External Secrets Operator may read."

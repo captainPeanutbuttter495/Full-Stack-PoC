@@ -23,6 +23,11 @@ node_min_size       = 2
 node_max_size       = 4
 node_desired_size   = 2
 
+# Helm add-ons (ALB controller + ESO). Keep true normally; set false ONLY for the
+# very first apply if you hit a provider-reaching-the-cluster error, then re-enable:
+#   terraform apply -target=module.network -target=module.eks   # then full apply
+install_eks_addons = true
+
 # Grant the CI deploy role (bootstrap/github-oidc output) kubectl access:
 # eks_access_entries = {
 #   ci = {
