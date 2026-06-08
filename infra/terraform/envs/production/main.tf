@@ -2,6 +2,19 @@
 # IRSA roles. Still to come (deferred to post-checkpoint phases): EKS add-on Helm
 # installs (ALB controller, External Secrets Operator), DNS/TLS (Route 53 + ACM),
 # Secrets Manager secrets, and the S3 + CloudFront downloads stack.
+# Guard against an unreachable-node configuration. Private nodes (worker_nodes_public
+# = false) with no NAT (enable_nat_gateway = false) have no route to the internet or
+# ECR, so the cluster can't pull images. Require either public nodes (demo) or NAT
+# (production-like). Evaluated at `terraform plan`.
+resource "terraform_data" "node_networking_guard" {
+  lifecycle {
+    precondition {
+      condition     = var.worker_nodes_public || var.enable_nat_gateway
+      error_message = "Invalid networking combo: worker_nodes_public = false with enable_nat_gateway = false leaves nodes in private subnets with no internet/ECR egress. Set worker_nodes_public = true (demo) OR enable_nat_gateway = true (production-like)."
+    }
+  }
+}
+
 module "ecr" {
   source          = "../../modules/ecr"
   repository_name = var.ecr_repository_name
