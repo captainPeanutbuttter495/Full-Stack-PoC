@@ -222,6 +222,113 @@ the Git source Argo CD reconciles, so the switch is additive, not a rewrite.
 | ACM/DNS validation; seeding the first Secret | ESO secret sync from Secrets Manager |
 | Verifying the ALB + health checks by hand | HPA autoscaling; optional Argo CD GitOps reconciliation |
 
+## Short-Lived Demo Deployment (Cost-Optimized)
+
+Goal: prove the **full Docker → ECR → EKS → Ingress → HTTPS** path **plus S3 +
+CloudFront protected downloads** for ~one week, then tear everything down cleanly
+without leaving expensive resources running. Optimization targets **only** the
+expensive, always-on compute/network; the cheap, demo-defining pieces stay.
+
+### What stays (not optimized away)
+
+- **Route 53 + ACM** — real domain and HTTPS are part of what's being demoed. A
+  hosted zone is `$0.50/month` (flat); public ACM certs are free.
+- **S3 private documents bucket + CloudFront (OAC) signed URLs** — the protected
+  download flow is a headline feature of the demo. Negligible cost at demo traffic.
+
+### The three expensive levers
+
+**1. EKS control plane — fixed `$0.10/hr` (~`$16.80`/week). Unavoidable with EKS.**
+It bills per hour the cluster exists, idle or not. The only lever is *time*: create
+at the start of the demo window and `terraform destroy` the moment it ends. Three
+days instead of seven ≈ `$7` instead of `$16.80`.
+
+**2. Worker nodes — compare options** (us-west-2, rough):
+
+| Option | Spec | ~Hourly | ~1 week | Notes |
+| ------ | ---- | ------- | ------- | ----- |
+| t3.medium on-demand ×2 | 2 vCPU / 4 GB | `$0.0832` | ~`$14` | Current default; production-like (≥2 nodes) |
+| t3.small on-demand ×1 | 2 vCPU / 2 GB | `$0.0208` | ~`$3.5` | Runs the app pod + system pods; min realistic size |
+| t3.small **Spot** ×1 | 2 vCPU / 2 GB | ~`$0.007` | ~`$1.2` | **Cheapest**; interruption risk is fine for a demo |
+| **Fargate** (per pod) | 0.25 vCPU / 0.5 GB | ~`$0.012` | ~`$2`/pod | No node management or idle cost — but **forces private subnets → NAT/endpoints** |
+
+Recommendation: **1× t3.small** (Spot for cheapest, on-demand for stability). One
+node runs the app plus system pods fine; you can still set 2 replicas (they
+co-schedule). Fargate is operationally clean but reintroduces NAT (next lever), so
+it is not the cost winner here.
+
+**3. NAT Gateway — ~`$0.045/hr` + `$0.045/GB` (~`$7.56`/week + data). Avoidable.**
+
+| Approach | NAT cost | Trade-off |
+| -------- | -------- | --------- |
+| **Public-subnet nodes, no NAT** (recommended for demo) | **`$0`** | Nodes reach the internet/ECR via the free Internet Gateway. Nodes get public IPs — fine for a short demo; the app is still only reachable through the ALB. |
+| Single NAT, private nodes | ~`$7.56`/wk | More production-like; keeps nodes private |
+| VPC endpoints (S3 gateway free + ECR/STS/logs interface) | ~`$1.68`/wk each | ~4 interface endpoints ≈ one NAT for a week, but more secure; add the **free S3 gateway endpoint** regardless |
+
+For lowest one-week cost, put the node group in **public subnets and disable NAT**
+(`enable_nat_gateway = false`).
+
+> ⚠️ **Implementation note:** `modules/network` today hardcodes
+> `enable_nat_gateway = true` with private node subnets. The no-NAT demo option
+> needs a small toggle (public node subnets + NAT off) added in the build phase —
+> it is not in the committed Terraform yet.
+
+> ⚠️ EKS **Fargate requires private subnets**, so choosing Fargate means keeping NAT
+> (or VPC endpoints). EC2 nodes in **public** subnets is what unlocks the no-NAT
+> saving.
+
+### Estimated one-week cost
+
+Rough us-west-2 estimates assuming the cluster runs the full 7 days — **not a quote.**
+
+| Scenario | Control plane | Nodes | NAT | ALB | R53/S3/CF | **Week total** |
+| -------- | ------------- | ----- | --- | --- | --------- | -------------- |
+| **A — cheapest** (public 1× t3.small Spot, no NAT) | `$16.80` | ~`$1.2` | `$0` | ~`$4` | ~`$0.7` | **≈ `$23`** |
+| B — balanced (public 1× t3.small on-demand, no NAT) | `$16.80` | ~`$3.5` | `$0` | ~`$4` | ~`$0.7` | **≈ `$25`** |
+| C — production-like (private 2× t3.medium, 1 NAT) | `$16.80` | ~`$14` | ~`$8.5` | ~`$4` | ~`$0.7` | **≈ `$44`** |
+
+ALB ≈ `$0.0225/hr` + small LCU. Route 53 zone `$0.50/mo` (flat), ACM free,
+S3/CloudFront negligible at demo traffic. **The control plane dominates every
+scenario** — the real money-saver is destroying promptly, not node choice.
+
+### Teardown checklist
+
+> ⚠️ The biggest risk is **orphaned resources Terraform does not own**: the ALB,
+> target groups, and security groups created *by the AWS Load Balancer Controller*
+> (not Terraform), plus a non-empty S3 bucket / ECR repo. They block VPC deletion
+> and keep billing. Delete the Kubernetes objects **first** so the controller
+> deprovisions its ALB, then destroy.
+
+1. **Delete the Ingress (and any `type: LoadBalancer` Service) first:**
+   `kubectl delete ingress --all -n pwyw` — wait until the ALB, target groups, and
+   controller-managed security groups disappear from the EC2 console. (Skipping this
+   strands an ALB + ENIs that prevent the VPC from deleting.)
+2. **Empty the S3 documents bucket** (or set `force_destroy = true`) — S3 won't
+   delete a non-empty bucket.
+3. **Delete ECR images** (or set `force_delete = true`) — `modules/ecr` defaults to
+   `force_delete = false`.
+4. **Disable + delete the CloudFront distribution** — if Terraform-managed it does
+   this, but propagation takes ~15 min; confirm it's gone.
+5. `terraform -chdir=infra/terraform/envs/production destroy` — removes EKS, node
+   group, IRSA, VPC/NAT/EIP, ECR, S3/CloudFront.
+6. `terraform -chdir=infra/terraform/bootstrap/github-oidc destroy`.
+7. **State backend last:** `bootstrap/state-backend` has `prevent_destroy = true` +
+   versioning. To remove it: drop `prevent_destroy`, empty all object versions, then
+   destroy (or delete the bucket + DynamoDB table by hand). Or just **leave it** — an
+   empty versioned bucket + on-demand lock table costs ≈ `$0`.
+8. **Manual sweep — confirm in the console / Cost Explorer that none remain:**
+   - EKS cluster, EC2 instances, **NAT Gateway**, **Elastic IPs** (an unattached NAT
+     EIP keeps billing), ALB / target groups, ENIs.
+   - **CloudWatch log groups** from the `amazon-cloudwatch-observability` add-on /
+     Container Insights — these persist after teardown; delete to stop storage charges.
+   - Route 53 hosted zone — keep if you keep the domain (`$0.50/mo`); delete stale
+     records pointing at the gone ALB.
+   - ACM certificate — free; leave or delete.
+
+**Safe to keep between demos (≈ `$0`):** the Terraform state bucket + lock table, the
+ACM cert, and the Route 53 hosted zone (if you want to retain the domain). Recreate
+the cluster / nodes / NAT / ALB each demo window.
+
 ## Related Docs
 
 - `Deployment/CI-CD.md` — current GitHub Actions pipelines (GHCR publish, Vitest, gated E2E).
