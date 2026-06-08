@@ -40,3 +40,11 @@ hosted_zone_id         = "Z0123456789ABCDEFGHIJK"  # your Route 53 zone ID
 app_hostname           = "demo.example.com"         # demo app host
 create_acm_certificate = true
 acm_certificate_arn    = ""
+
+# --- Secrets Manager + S3/CloudFront downloads (force_destroy for clean teardown) ---
+enable_secrets          = true
+secrets_prefix          = "pwyw"
+enable_storage_cdn      = true
+documents_bucket_name   = "pwyw-documents-demo-REPLACE-ME" # globally unique
+documents_force_destroy = true                              # DEMO-ONLY clean teardown
+cloudfront_price_class  = "PriceClass_100"

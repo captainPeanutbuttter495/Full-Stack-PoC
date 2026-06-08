@@ -36,6 +36,14 @@ app_hostname           = "pwyw.example.com"         # public app host
 create_acm_certificate = true                       # issue a DNS-validated cert
 acm_certificate_arn    = ""                          # or set this and flip create_* to false
 
+# --- Secrets Manager + S3/CloudFront downloads ---
+enable_secrets          = true
+secrets_prefix          = "pwyw"
+enable_storage_cdn      = true
+documents_bucket_name   = "pwyw-documents-REPLACE-ME" # must be globally unique
+documents_force_destroy = false                        # keep documents safe in prod
+cloudfront_price_class  = "PriceClass_100"
+
 # Grant the CI deploy role (bootstrap/github-oidc output) kubectl access:
 # eks_access_entries = {
 #   ci = {

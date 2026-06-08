@@ -67,9 +67,10 @@ module "irsa" {
   cluster_name      = var.cluster_name
   oidc_provider_arn = module.eks.oidc_provider_arn
 
-  # Placeholders until the secrets/storage phases create the real resources.
-  secrets_manager_arns         = var.secrets_manager_arns
-  documents_bucket_object_arns = var.documents_bucket_object_arns
+  # Narrow IRSA to the real ARNs when the secrets/storage modules are enabled;
+  # fall back to the placeholder vars otherwise.
+  secrets_manager_arns         = var.enable_secrets ? [module.secrets[0].secret_arn] : var.secrets_manager_arns
+  documents_bucket_object_arns = var.enable_storage_cdn ? module.storage_cdn[0].bucket_object_arns : var.documents_bucket_object_arns
 
   tags = var.tags
 }
@@ -101,6 +102,29 @@ module "dns_tls" {
   app_hostname       = var.app_hostname
   certificate_arn    = var.acm_certificate_arn
   create_certificate = var.create_acm_certificate
+
+  tags = var.tags
+}
+
+# AWS Secrets Manager container for the app's server-only secrets. ESO (installed
+# by module.eks_addons) syncs it into the K8s app-secrets Secret. Value is set
+# out-of-band — never by Terraform.
+module "secrets" {
+  source = "../../modules/secrets"
+  count  = var.enable_secrets ? 1 : 0
+
+  prefix = var.secrets_prefix
+  tags   = var.tags
+}
+
+# Private S3 documents bucket + CloudFront (OAC) for protected downloads.
+module "storage_cdn" {
+  source = "../../modules/storage-cdn"
+  count  = var.enable_storage_cdn ? 1 : 0
+
+  bucket_name   = var.documents_bucket_name
+  force_destroy = var.documents_force_destroy # DEMO-ONLY when true
+  price_class   = var.cloudfront_price_class
 
   tags = var.tags
 }

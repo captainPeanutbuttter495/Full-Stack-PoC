@@ -157,17 +157,55 @@ variable "create_acm_certificate" {
   default     = true
 }
 
-# --- IRSA placeholders (narrowed once secrets/storage phases exist) ----------
+# --- IRSA fallbacks (used only when the modules below are disabled) ----------
 variable "secrets_manager_arns" {
-  description = "Secrets Manager ARNs the External Secrets Operator may read."
+  description = "Secrets Manager ARNs the ESO may read (fallback when enable_secrets = false)."
   type        = list(string)
   default     = ["*"]
 }
 
 variable "documents_bucket_object_arns" {
-  description = "S3 object ARNs the app may GetObject for signed downloads."
+  description = "S3 object ARNs the app may GetObject (fallback when enable_storage_cdn = false)."
   type        = list(string)
   default     = ["*"]
+}
+
+# --- Secrets Manager + ESO ---------------------------------------------------
+variable "enable_secrets" {
+  description = "Create the Secrets Manager container for the app secrets."
+  type        = bool
+  default     = true
+}
+
+variable "secrets_prefix" {
+  description = "Secret name prefix/path."
+  type        = string
+  default     = "pwyw"
+}
+
+# --- S3 + CloudFront protected downloads -------------------------------------
+variable "enable_storage_cdn" {
+  description = "Create the private S3 documents bucket + CloudFront distribution."
+  type        = bool
+  default     = true
+}
+
+variable "documents_bucket_name" {
+  description = "Globally-unique S3 bucket name for documents (replace the placeholder)."
+  type        = string
+  default     = "pwyw-documents-REPLACE-ME"
+}
+
+variable "documents_force_destroy" {
+  description = "Empty + delete the bucket on destroy. DEMO-ONLY — keep false for production."
+  type        = bool
+  default     = false
+}
+
+variable "cloudfront_price_class" {
+  description = "CloudFront price class (PriceClass_100 cheapest)."
+  type        = string
+  default     = "PriceClass_100"
 }
 
 variable "tags" {

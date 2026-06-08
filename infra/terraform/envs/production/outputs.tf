@@ -50,3 +50,19 @@ output "app_hostname" {
   description = "Public hostname — set as the ALB Ingress rule host."
   value       = try(module.dns_tls[0].app_hostname, null)
 }
+
+# --- Secrets + storage (null when disabled) ----------------------------------
+output "app_secret_name" {
+  description = "Secrets Manager secret name — referenced by the ExternalSecret key."
+  value       = try(module.secrets[0].secret_name, null)
+}
+
+output "documents_bucket_name" {
+  description = "Private documents S3 bucket name."
+  value       = try(module.storage_cdn[0].bucket_name, null)
+}
+
+output "documents_cdn_domain" {
+  description = "CloudFront domain for protected downloads."
+  value       = try(module.storage_cdn[0].cloudfront_domain_name, null)
+}

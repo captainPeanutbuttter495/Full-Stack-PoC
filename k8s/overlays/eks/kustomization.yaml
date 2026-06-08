@@ -18,6 +18,8 @@ resources:
   - ingress-alb.yaml
   - hpa.yaml
   - pdb.yaml
+  - clustersecretstore.yaml
+  - externalsecret.yaml
 
 # Repoint GHCR -> ECR. CI overrides newTag with the immutable sha-<commit> at deploy
 # (see the deploy job in .github/workflows/production.yml).
