@@ -268,10 +268,13 @@ it is not the cost winner here.
 For lowest one-week cost, put the node group in **public subnets and disable NAT**
 (`enable_nat_gateway = false`).
 
-> ⚠️ **Implementation note:** `modules/network` today hardcodes
-> `enable_nat_gateway = true` with private node subnets. The no-NAT demo option
-> needs a small toggle (public node subnets + NAT off) added in the build phase —
-> it is not in the committed Terraform yet.
+> ✅ **Implemented in Terraform.** The toggles exist in the committed modules:
+> `enable_nat_gateway`, `worker_nodes_public`, `enable_s3_gateway_endpoint`,
+> `node_instance_types`, `node_capacity_type`, and `ecr_force_delete`. Use
+> `infra/terraform/envs/production/demo.tfvars.example` for the no-NAT, public-node,
+> Spot demo config, or `terraform.tfvars.example` for the private-node + NAT
+> production-like config. (The S3 documents bucket `force_destroy` toggle arrives
+> with the storage phase.) Still **unapplied** — no resources exist.
 
 > ⚠️ EKS **Fargate requires private subnets**, so choosing Fargate means keeping NAT
 > (or VPC endpoints). EC2 nodes in **public** subnets is what unlocks the no-NAT

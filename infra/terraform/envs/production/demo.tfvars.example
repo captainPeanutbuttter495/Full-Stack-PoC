@@ -1,0 +1,30 @@
+# DEMO MODE — cheapest short-lived deployment (~1 week, then terraform destroy).
+# Copy to terraform.tfvars for a demo run:  cp demo.tfvars.example terraform.tfvars
+#
+# Differences from production-like mode:
+#   - No NAT gateway (nodes run in PUBLIC subnets, reach ECR via the free IGW)
+#   - 1× t3.small SPOT node instead of 2× t3.medium on-demand
+#   - ECR force_delete = true so `terraform destroy` doesn't snag on images
+# See Deployment/AWS.md "Short-Lived Demo Deployment" for cost + teardown.
+region              = "us-west-2"
+ecr_repository_name = "pwyw-web"
+ecr_force_delete    = true # DEMO-ONLY: lets destroy remove the repo with images
+
+# --- Network (public nodes, NO NAT) ---
+vpc_cidr                   = "10.0.0.0/16"
+azs                        = ["us-west-2a", "us-west-2b"]
+private_subnets            = ["10.0.0.0/20", "10.0.16.0/20"]
+public_subnets             = ["10.0.48.0/20", "10.0.64.0/20"]
+enable_nat_gateway         = false # saves ~$7.56/week
+single_nat_gateway         = true  # ignored when NAT is disabled
+enable_s3_gateway_endpoint = true  # free; keeps S3 traffic off the public path
+worker_nodes_public        = true  # nodes in public subnets, get public IPs
+
+# --- EKS (single cheap Spot node) ---
+cluster_name        = "pwyw"
+cluster_version     = "1.30"
+node_instance_types = ["t3.small"]
+node_capacity_type  = "SPOT"
+node_min_size       = 1
+node_max_size       = 2
+node_desired_size   = 1

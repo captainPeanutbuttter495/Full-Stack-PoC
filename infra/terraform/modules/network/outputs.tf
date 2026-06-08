@@ -9,6 +9,11 @@ output "private_subnet_ids" {
 }
 
 output "public_subnet_ids" {
-  description = "Public subnet IDs — internet-facing ALB subnets."
+  description = "Public subnet IDs — internet-facing ALB (and demo-mode nodes)."
   value       = module.vpc.public_subnets
+}
+
+output "s3_gateway_endpoint_id" {
+  description = "S3 gateway VPC endpoint ID (null when disabled)."
+  value       = try(aws_vpc_endpoint.s3[0].id, null)
 }

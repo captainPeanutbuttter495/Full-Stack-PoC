@@ -27,8 +27,11 @@ module "eks" {
 
   enable_irsa = true
 
-  vpc_id     = var.vpc_id
-  subnet_ids = var.private_subnet_ids
+  vpc_id = var.vpc_id
+  # Subnets for the cluster ENIs and node group. Production-like passes private
+  # subnets; demo mode passes public subnets (so nodes reach ECR via the IGW
+  # without NAT). The env stack selects which based on var.worker_nodes_public.
+  subnet_ids = var.node_subnet_ids
 
   # EKS-managed add-ons. amazon-cloudwatch-observability ships pod logs + metrics
   # to CloudWatch (Container Insights).

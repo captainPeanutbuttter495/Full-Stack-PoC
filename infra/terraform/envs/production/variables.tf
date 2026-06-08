@@ -10,6 +10,12 @@ variable "ecr_repository_name" {
   default     = "pwyw-web"
 }
 
+variable "ecr_force_delete" {
+  description = "Allow destroying the ECR repo with images still in it. DEMO-ONLY — keep false for production."
+  type        = bool
+  default     = false
+}
+
 # --- Network ----------------------------------------------------------------
 variable "vpc_cidr" {
   description = "VPC CIDR block."
@@ -35,10 +41,28 @@ variable "public_subnets" {
   default     = ["10.0.48.0/20", "10.0.64.0/20", "10.0.80.0/20"]
 }
 
-variable "single_nat_gateway" {
-  description = "One NAT gateway (cheaper) vs one per AZ."
+variable "enable_nat_gateway" {
+  description = "Create NAT gateway(s). Set false for demo mode (public nodes, no NAT cost)."
   type        = bool
   default     = true
+}
+
+variable "single_nat_gateway" {
+  description = "One NAT gateway (cheaper) vs one per AZ. Ignored when enable_nat_gateway = false."
+  type        = bool
+  default     = true
+}
+
+variable "enable_s3_gateway_endpoint" {
+  description = "Create the free S3 gateway VPC endpoint (recommended both modes)."
+  type        = bool
+  default     = true
+}
+
+variable "worker_nodes_public" {
+  description = "Place nodes in PUBLIC subnets (demo, no NAT). Keep false for production (private nodes)."
+  type        = bool
+  default     = false
 }
 
 # --- EKS cluster + node group -----------------------------------------------

@@ -5,19 +5,26 @@
 module "ecr" {
   source          = "../../modules/ecr"
   repository_name = var.ecr_repository_name
+  force_delete    = var.ecr_force_delete # true only for easy demo teardown
   tags            = var.tags
 }
 
 module "network" {
   source = "../../modules/network"
 
-  name               = var.cluster_name
-  cidr               = var.vpc_cidr
-  azs                = var.azs
-  private_subnets    = var.private_subnets
-  public_subnets     = var.public_subnets
-  single_nat_gateway = var.single_nat_gateway
-  tags               = var.tags
+  name            = var.cluster_name
+  cidr            = var.vpc_cidr
+  azs             = var.azs
+  private_subnets = var.private_subnets
+  public_subnets  = var.public_subnets
+
+  enable_nat_gateway         = var.enable_nat_gateway
+  single_nat_gateway         = var.single_nat_gateway
+  enable_s3_gateway_endpoint = var.enable_s3_gateway_endpoint
+  # Demo public-subnet nodes need public IPs; production private nodes do not.
+  map_public_ip_on_launch = var.worker_nodes_public
+
+  tags = var.tags
 }
 
 module "eks" {
@@ -26,8 +33,9 @@ module "eks" {
   cluster_name    = var.cluster_name
   cluster_version = var.cluster_version
 
-  vpc_id             = module.network.vpc_id
-  private_subnet_ids = module.network.private_subnet_ids
+  vpc_id = module.network.vpc_id
+  # Demo mode runs nodes in public subnets (no NAT); production keeps them private.
+  node_subnet_ids = var.worker_nodes_public ? module.network.public_subnet_ids : module.network.private_subnet_ids
 
   node_instance_types = var.node_instance_types
   node_capacity_type  = var.node_capacity_type

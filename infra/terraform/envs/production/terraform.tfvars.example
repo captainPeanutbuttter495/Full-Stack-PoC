@@ -1,15 +1,20 @@
-# Copy to terraform.tfvars and adjust. No secrets belong in this file.
+# PRODUCTION-LIKE MODE. Copy to terraform.tfvars and adjust. No secrets here.
+# For a cheap, short-lived demo, copy demo.tfvars.example instead.
 region              = "us-west-2"
 ecr_repository_name = "pwyw-web"
+ecr_force_delete    = false # keep images safe; do not auto-delete on destroy
 
-# --- Network ---
-vpc_cidr           = "10.0.0.0/16"
-azs                = ["us-west-2a", "us-west-2b", "us-west-2c"]
-private_subnets    = ["10.0.0.0/20", "10.0.16.0/20", "10.0.32.0/20"]
-public_subnets     = ["10.0.48.0/20", "10.0.64.0/20", "10.0.80.0/20"]
-single_nat_gateway = true
+# --- Network (private nodes behind NAT) ---
+vpc_cidr                   = "10.0.0.0/16"
+azs                        = ["us-west-2a", "us-west-2b", "us-west-2c"]
+private_subnets            = ["10.0.0.0/20", "10.0.16.0/20", "10.0.32.0/20"]
+public_subnets             = ["10.0.48.0/20", "10.0.64.0/20", "10.0.80.0/20"]
+enable_nat_gateway         = true
+single_nat_gateway         = true
+enable_s3_gateway_endpoint = true
+worker_nodes_public        = false # private nodes
 
-# --- EKS ---
+# --- EKS (2× on-demand for availability + rolling updates) ---
 cluster_name        = "pwyw"
 cluster_version     = "1.30"
 node_instance_types = ["t3.medium"]

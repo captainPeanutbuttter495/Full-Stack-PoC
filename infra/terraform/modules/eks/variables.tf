@@ -15,8 +15,8 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "private_subnet_ids" {
-  description = "Private subnets for the managed node group."
+variable "node_subnet_ids" {
+  description = "Subnets for the cluster ENIs + node group (private for prod, public for demo)."
   type        = list(string)
 }
 
@@ -27,9 +27,14 @@ variable "node_instance_types" {
 }
 
 variable "node_capacity_type" {
-  description = "ON_DEMAND or SPOT."
+  description = "ON_DEMAND (stable) or SPOT (cheapest, interruptible — good for demos)."
   type        = string
   default     = "ON_DEMAND"
+
+  validation {
+    condition     = contains(["ON_DEMAND", "SPOT"], var.node_capacity_type)
+    error_message = "node_capacity_type must be ON_DEMAND or SPOT."
+  }
 }
 
 variable "node_min_size" {
