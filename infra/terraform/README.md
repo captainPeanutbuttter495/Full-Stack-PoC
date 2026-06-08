@@ -6,10 +6,16 @@
 > Apply only after the architecture is approved and real credentials/values are in
 > place.
 
-This tree is built up across stacked phases. **Phase 2 (this commit)** lays the
-foundation: remote state, the GitHub OIDC trust CI uses to authenticate to AWS, and
-the ECR repository. Later phases add the network, EKS cluster, add-ons, DNS/TLS,
-secrets, and storage modules.
+This tree is built up across stacked phases:
+
+- **Phase 2** — foundation: remote state, the GitHub OIDC trust CI uses to
+  authenticate to AWS, and the ECR repository.
+- **Phase 4** — the network (VPC), the EKS cluster + managed node group +
+  EKS-managed add-ons, and IRSA roles.
+- **Deferred (post-checkpoint)** — Helm installs of the ALB Controller and External
+  Secrets Operator, DNS/TLS (Route 53 + ACM), Secrets Manager secrets, and the
+  S3 + CloudFront downloads stack. RDS stays a documented `Future:` option (the app
+  keeps using Supabase).
 
 ## Layout
 
@@ -19,10 +25,23 @@ infra/terraform/
 │   ├── state-backend/         # S3 state bucket + DynamoDB lock table
 │   └── github-oidc/           # IAM OIDC provider + GitHub Actions deploy role
 ├── modules/                   # reusable, environment-agnostic building blocks
-│   └── ecr/                   # private image repository + lifecycle policy
+│   ├── ecr/                   # private image repository + lifecycle policy
+│   ├── network/               # VPC (community module): public + private subnets
+│   ├── eks/                   # cluster, managed node group, add-ons, access entries
+│   └── irsa/                  # IAM roles for ALB controller, ESO, and app S3 access
 └── envs/
     └── production/            # composes the modules; remote state in S3
 ```
+
+> The community `terraform-aws-modules/{vpc,eks,iam}` modules are used for the
+> network, cluster, and IRSA roles. `terraform init` fetches them; versions are
+> pinned in each module's `main.tf`.
+
+> ⚠️ The ALB Controller and External Secrets Operator are installed via **Helm in a
+> separate phase**, not here: their providers must point at a cluster that already
+> exists, so installing them in the same apply as the cluster is the classic
+> chicken-and-egg failure. Their IAM/IRSA roles (`modules/irsa`) are created now;
+> the Helm releases come after the cluster is up.
 
 ## Order of operations
 
