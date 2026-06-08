@@ -72,8 +72,15 @@ existing CI behavior is preserved. The job:
    pin the K8s manifests reference). Prefixes match the `modules/ecr` lifecycle
    policy.
 
-> ⚠️ **PoC limitation:** the actual **deploy-to-EKS** step (update kubeconfig, set
-> the image) is a later phase; today this job only builds and pushes to ECR.
+### `Future:` Continuous Deploy to EKS
+
+A `deploy` job (`needs: ecr`) rolls the running EKS Deployment to the freshly pushed
+image. It authenticates via the same OIDC role, runs `aws eks update-kubeconfig`,
+then `kubectl -n pwyw set image deployment/pwyw-web web=<ECR>:sha-<commit>` and waits
+for the rollout. It is **image-roll only** — the cluster and the EKS overlay
+(`k8s/overlays/eks`) are provisioned once out-of-band with the real IRSA/cert/host
+values, so this job never touches the manifest placeholders. Gated on
+`vars.EKS_CLUSTER_NAME`, so it stays skipped until the cluster exists.
 
 ## Required GitHub Secrets & Variables
 
@@ -94,8 +101,9 @@ pipelines can fully run.
 | `E2E_ENABLED`                          | **Variable** | `tests` e2e gate              | Set to `'true'` to enable the E2E job          |
 | `GITHUB_TOKEN`                         | (built-in)   | GHCR push                     | Provided automatically; no setup               |
 | `AWS_DEPLOY_ROLE_ARN`                  | Secret       | `ecr` job (OIDC)              | Role ARN from `bootstrap/github-oidc`          |
-| `AWS_REGION`                           | **Variable** | `ecr` job                     | Also the AWS-path gate — unset = job skipped   |
-| `ECR_REPOSITORY`                       | **Variable** | `ecr` job                     | Repo name, e.g. `pwyw-web` (`modules/ecr`)     |
+| `AWS_REGION`                           | **Variable** | `ecr` + `deploy` jobs         | Also the ECR-path gate — unset = `ecr` skipped |
+| `ECR_REPOSITORY`                       | **Variable** | `ecr` + `deploy` jobs         | Repo name, e.g. `pwyw-web` (`modules/ecr`)     |
+| `EKS_CLUSTER_NAME`                     | **Variable** | `deploy` job                  | Deploy-path gate — unset = `deploy` skipped    |
 
 ## ⚠️ Activation — getting `tests.yml` to run on `tests`
 

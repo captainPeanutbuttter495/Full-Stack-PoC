@@ -213,6 +213,13 @@ the Git source Argo CD reconciles, so the switch is additive, not a rewrite.
 | 8 | **Continuous deploy** | `production.yml` deploy job updates the EKS image to the SHA on every push. |
 | 9 | **(`Future:`) RDS / Argo CD** | Migrate DB into the VPC if going all-in-AWS; adopt Argo CD GitOps for multi-env. |
 
+> **Implementation status:** Phases 1–8 are **written as unapplied IaC** — Terraform
+> under `infra/terraform/` (bootstrap + `modules/{ecr,network,eks,eks-addons,irsa,dns-tls,secrets,storage-cdn}`
+> + `envs/production`), the EKS Kustomize overlay at `k8s/overlays/eks/`, and the
+> `ecr` + `deploy` jobs in `production.yml`. **Nothing has been `terraform apply`-d
+> and no AWS resources exist.** All account IDs, ARNs, domains, and secret values are
+> placeholders set at deploy time. Phase 9 (RDS / Argo CD) stays `Future:`.
+
 ## Manual First vs. Automated Later
 
 | Manual at first | Automated later |

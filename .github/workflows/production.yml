@@ -141,3 +141,36 @@ jobs:
           build-args: |
             NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+  # Continuous deploy (Future:). Rolls the running EKS Deployment to the freshly
+  # pushed image. Assumes the cluster + EKS overlay were provisioned once (with the
+  # real IRSA/cert/host values filled in) — this job only moves the image forward,
+  # so it never needs the manifest placeholders. Gated on vars.EKS_CLUSTER_NAME, so
+  # it stays skipped until the cluster exists. ubuntu-latest ships aws CLI v2 +
+  # kubectl, so no extra installs.
+  deploy:
+    name: Deploy to EKS
+    needs: ecr
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && vars.EKS_CLUSTER_NAME != '' }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${{ vars.AWS_REGION }}"
+
+      # Roll the Deployment to the immutable sha-<commit> tag pushed by the `ecr`
+      # job, then wait for the rollout to finish (fails the run if it stalls).
+      - name: Roll deployment to the new image
+        run: |
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          IMAGE="${ACCOUNT_ID}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/${{ vars.ECR_REPOSITORY }}:sha-${GITHUB_SHA}"
+          kubectl -n pwyw set image deployment/pwyw-web web="$IMAGE"
+          kubectl -n pwyw rollout status deployment/pwyw-web --timeout=300s
