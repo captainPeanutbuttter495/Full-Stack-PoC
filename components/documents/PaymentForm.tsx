@@ -23,16 +23,25 @@ type PaymentFormProps = { doc: Document; onSuccess: () => void };
 
 function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
   const [open, setOpen] = useState(false);
-  const [paymentAmount, setPaymentAmount] = React.useState(0);
+  const [paymentAmount, setPaymentAmount] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const numericAmount = parseFloat(paymentAmount) || 0;
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (!next) {
-      setPaymentAmount(0);
+      setPaymentAmount("");
       setError(null);
     }
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (!/^\d*\.?\d{0,2}$/.test(val)) return;
+    // Strip leading zeros before a non-zero digit (e.g. "012" -> "12"), but allow "0."
+    setPaymentAmount(val.replace(/^0+(\d)/, "$1"));
   };
 
   const handlePayment = async () => {
@@ -46,7 +55,7 @@ function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
       },
       body: JSON.stringify({
         document_id: doc.id,
-        amount: paymentAmount,
+        amount: numericAmount,
       }),
     });
 
@@ -92,13 +101,10 @@ function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
           <InputGroup>
             <InputGroupInput
               placeholder="0.50"
-              type="number"
-              min={0.5}
-              step={0.01}
+              type="text"
+              inputMode="decimal"
               value={paymentAmount}
-              onChange={(e) =>
-                setPaymentAmount(parseFloat(e.target.value) || 0)
-              }
+              onChange={handleAmountChange}
             />
             <InputGroupAddon>
               <p>$</p>
@@ -113,7 +119,7 @@ function PaymentForm({ doc, onSuccess }: PaymentFormProps) {
             </DialogClose>
             <Button
               variant="default"
-              disabled={paymentAmount < 0.5 || loading}
+              disabled={numericAmount < 0.5 || loading}
               type="submit"
             >
               {loading ? (
